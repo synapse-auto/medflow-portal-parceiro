@@ -58,8 +58,5 @@ export function camposDaAba(aba: Aba, papel: Role): CampoDef[] {
 }
 
 // Rótulos de status (pt-BR) — usados quando formato === "status".
-export const STATUS_LABEL: Record<string, string> = {
-  pago: "Pago",
-  a_pagar: "A Pagar",
-  atrasado: "Atrasado",
-};
+// Reexporta a FONTE ÚNICA (lib/format) para não divergir dos badges.
+export { STATUS_LABEL } from "@/lib/format";

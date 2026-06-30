@@ -1,5 +1,7 @@
 """Router de Visão Geral — `GET /api/overview` (T048). Parceiro escopado / gestor global."""
 
+from datetime import date
+
 from fastapi import APIRouter, Query, Request
 
 from app.auth.deps import CurrentUser
@@ -18,9 +20,10 @@ def get_overview(
     user: CurrentUser,
     ano: int | None = Query(None, description="ano de originação; default = ano corrente"),
     meses: str | None = Query(None, description="meses 1-12 (csv); vazio = ano inteiro"),
+    dia: date | None = Query(None, description="data de originação exata (ISO aaaa-mm-dd)"),
 ) -> dict:
     papel = "gestor" if is_gestor(user) else "parceiro"
     filtros = parse_filtros(request.query_params, ABA_OVERVIEW, papel)
     meses_sel = [int(m) for m in meses.split(",") if m.strip()] if meses else None
     dataset = get_dataset_service().get()
-    return overview(dataset.validas, user, ano=ano, meses=meses_sel, filtros=filtros)
+    return overview(dataset.validas, user, ano=ano, meses=meses_sel, dia=dia, filtros=filtros)

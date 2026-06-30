@@ -79,7 +79,7 @@ export default function PagamentosPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard index={0} label="Aguardando verificação" value={String(data?.cards.aguardando ?? 0)} icon={Clock} tone="warning" highlight={(data?.cards.aguardando ?? 0) > 0} />
+            <StatCard index={0} label="Em Análise" value={String(data?.cards.aguardando ?? 0)} icon={Clock} tone="warning" highlight={(data?.cards.aguardando ?? 0) > 0} />
             <StatCard index={1} label="Verificadas" value={String(data?.cards.verificadas ?? 0)} icon={CircleCheckBig} tone="success" />
             <StatCard index={2} label="Falta aviso" value={String(data?.cards.falta_aviso ?? 0)} icon={ShieldQuestion} tone="brand" />
           </div>
@@ -127,7 +127,7 @@ function SecaoContratante({ c, onMutate }: { c: ContratantePagamentos; onMutate:
           {aguardando.length > 0 ? (
             <Badge className="bg-warning/15 text-warning-foreground">
               <Clock className="size-3" />
-              {aguardando.length} aguardando
+              {aguardando.length} em análise
             </Badge>
           ) : null}
           {verificadas.length > 0 ? (
@@ -147,7 +147,7 @@ function SecaoContratante({ c, onMutate }: { c: ContratantePagamentos; onMutate:
 
       <CardContent className="flex flex-col gap-5 p-5">
         {aguardando.length > 0 ? (
-          <Bloco titulo="Aguardando verificação" tom="warning">
+          <Bloco titulo="Em Análise" tom="warning">
             <div className="grid gap-3 md:grid-cols-2">
               {aguardando.map((a) => (
                 <AvisoCard key={a.id} aviso={a} onMutate={onMutate} />

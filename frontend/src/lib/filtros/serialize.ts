@@ -3,6 +3,7 @@
 // ida/volta entre a string da URL e o que os editores manipulam, + resumo do chip.
 
 import { formatData, formatMes, formatMoeda } from "@/lib/format";
+import type { StatusKey } from "@/lib/types";
 import { type CampoDef, STATUS_LABEL } from "./registry";
 
 const SEP = "..";
@@ -44,7 +45,7 @@ export function serializaFaixa({ min, max }: Faixa): string {
 
 /** Rótulo de uma opção (multi) conforme o formato do campo. */
 export function rotuloOpcao(campo: CampoDef, valor: string): string {
-  if (campo.formato === "status") return STATUS_LABEL[valor] ?? valor;
+  if (campo.formato === "status") return STATUS_LABEL[valor as StatusKey] ?? valor;
   if (campo.formato === "mes") return formatMes(valor);
   return valor;
 }

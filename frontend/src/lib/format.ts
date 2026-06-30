@@ -1,6 +1,22 @@
 // Formatação de exibição (pt-BR) — util ÚNICO do frontend (DRY, Princípio II).
 // Backend manda dinheiro como string decimal e datas ISO; aqui só formatamos.
 
+import type { StatusKey } from "@/lib/types";
+
+// Rótulos de status — FONTE ÚNICA de exibição no frontend. As CHAVES internas
+// (pago/a_pagar/atrasado) não mudam; só o texto mostrado ao usuário. O front NÃO usa
+// mais o `status_label` vindo do backend para os três status de solicitação.
+export const STATUS_LABEL: Record<StatusKey, string> = {
+  pago: "Pago",
+  a_pagar: "A Vencer",
+  atrasado: "Vencido",
+};
+
+/** Rótulo de exibição de um status de solicitação. */
+export function statusLabel(status: StatusKey): string {
+  return STATUS_LABEL[status] ?? status;
+}
+
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",

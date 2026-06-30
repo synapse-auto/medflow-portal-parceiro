@@ -57,10 +57,16 @@ const subColunas: Coluna<Solicitacao>[] = [
   { id: "cliente", header: "Cliente", cell: (s) => s.cliente },
   { id: "valor", header: "Originação", align: "right", cell: (s) => formatMoeda(s.valor) },
   {
+    id: "cashback",
+    header: "Rebate",
+    align: "right",
+    cell: (s) => <span className="text-success">{formatMoeda(s.cashback)}</span>,
+  },
+  {
     id: "status",
     header: "Status",
     align: "right",
-    cell: (s) => <BadgeStatus status={s.status} label={s.status_label} />,
+    cell: (s) => <BadgeStatus status={s.status} />,
   },
 ];
 

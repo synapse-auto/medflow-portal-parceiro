@@ -52,7 +52,7 @@ export function colunasSolicitacao(gestor = false): ColunaSolic[] {
       label: "Status",
       header: "Status",
       essential: true,
-      cell: (s) => <BadgeStatus status={s.status} label={s.status_label} />,
+      cell: (s) => <BadgeStatus status={s.status} />,
     },
     // --- Extras (modelo completo, ocultas por padrão) ---
     {

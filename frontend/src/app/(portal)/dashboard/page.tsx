@@ -36,6 +36,7 @@ function DashboardView() {
   const [ano, setAno] = useState(() => new Date().getFullYear());
   const [porMes, setPorMes] = useState(false);
   const [meses, setMeses] = useState<number[]>(TODOS_OS_MESES);
+  const [dia, setDia] = useState(""); // data de originação exata (ISO); "" = todos os dias
   const [data, setData] = useState<Overview | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -48,11 +49,12 @@ function DashboardView() {
     const params = new URLSearchParams(queryString); // status/unidade/contratante (chips)
     params.set("ano", String(ano));
     if (porMes && mesesKey) params.set("meses", mesesKey);
+    if (dia) params.set("dia", dia);
     apiGet<Overview>(`/api/overview?${params}`)
       .then(setData)
       .catch((e) => setErro(e instanceof Error ? e.message : "Erro ao carregar a visão geral."))
       .finally(() => setCarregando(false));
-  }, [ano, porMes, mesesKey, queryString]);
+  }, [ano, porMes, mesesKey, dia, queryString]);
 
   useEffect(() => {
     carregar();
@@ -68,6 +70,12 @@ function DashboardView() {
   function alternaPorMes(ativo: boolean) {
     setPorMes(ativo);
     if (ativo && meses.length === 0) setMeses(TODOS_OS_MESES);
+  }
+
+  function escolheDia(iso: string) {
+    setDia(iso);
+    // Mantém o ano coerente com o dia escolhido (o dia filtra por data exata).
+    if (iso) setAno(Number(iso.slice(0, 4)));
   }
 
   const primeiroNome = me?.nome_exibicao?.trim().split(/\s+/)[0] ?? "";
@@ -90,9 +98,11 @@ function DashboardView() {
         anosDisponiveis={data?.anos_disponiveis ?? []}
         porMes={porMes}
         meses={meses}
+        dia={dia}
         onAno={setAno}
         onPorMes={alternaPorMes}
         onMeses={setMeses}
+        onDia={escolheDia}
       />
 
       {/* Barra de filtros (chips) — impacta cards e gráfico (RF-F08) */}

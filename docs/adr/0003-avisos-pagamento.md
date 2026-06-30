@@ -41,12 +41,14 @@ Supabase Auth `app_metadata` — inadequada para um quadro de avisos consultáve
    liberam um novo aviso da mesma unidade.
 
 6. **Visão do gestor** (`GET /api/pagamentos`): seções grandes por contratante, com 3 blocos —
-   **Aguardando verificação** (pendentes), **Verificadas** e **Falta aviso** (unidades com
-   pendência no sheet e sem aviso ativo; anota o motivo do último aviso rejeitado, se houver).
+   **Em Análise** (pendentes; rótulo de UI — antes "Aguardando verificação"), **Verificadas** e
+   **Falta aviso** (unidades com pendência no sheet e sem aviso ativo; anota o motivo do último
+   aviso rejeitado, se houver).
 
 7. **Visão do parceiro** (`GET /api/pagamentos/meus`): mapa `unidade → aviso vigente` que define
-   o controle de cada linha na aba Vencimentos (Pagar · Aviso enviado · Pagamento verificado ·
-   Rejeitado+motivo).
+   o controle de cada linha na aba Vencimentos (Pagar · **Em Análise** [aviso pendente] ·
+   Pagamento verificado · Rejeitado+motivo). O status interno do aviso (`pendente`) não muda;
+   "Em Análise" é só o rótulo de exibição.
 
 ## Consequences
 

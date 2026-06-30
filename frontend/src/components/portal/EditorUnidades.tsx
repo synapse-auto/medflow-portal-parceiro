@@ -5,9 +5,9 @@ import { AlertTriangle, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { UnidadeInfo } from "@/lib/types";
 
@@ -83,9 +83,9 @@ export function EditorUnidades({
                   <span className="truncate text-sm font-medium">{u.unidade}</span>
                   <BadgeVinculo info={u} contratanteAtual={contratanteAtual} ligado={ligado} />
                 </div>
-                <Switch
+                <Checkbox
                   checked={ligado}
-                  onCheckedChange={(v) => onToggle(u.unidade, v)}
+                  onCheckedChange={(v) => onToggle(u.unidade, v === true)}
                   aria-label={`Vincular ${u.unidade}`}
                 />
               </li>

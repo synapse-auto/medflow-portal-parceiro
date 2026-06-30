@@ -18,7 +18,7 @@ export function DetalheSolicitacao({ detalhe }: { detalhe: SolicitacaoDetalhe })
         <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-medium text-foreground/80 ring-1 ring-border/60">
           {s.codigo}
         </span>
-        <BadgeStatus status={s.status} label={s.status_label} />
+        <BadgeStatus status={s.status} />
       </div>
 
       <Secao titulo="Financeiro">

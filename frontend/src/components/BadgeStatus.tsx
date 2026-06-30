@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { statusLabel } from "@/lib/format";
 import type { StatusKey } from "@/lib/types";
 
 // Status nunca depende só de cor (a11y): pílula com ponto + rótulo textual.
@@ -8,15 +9,15 @@ const ESTILO: Record<StatusKey, string> = {
   atrasado: "bg-destructive/10 text-danger-ink",
 };
 
+// O rótulo é derivado do `status` (fonte única em lib/format) — não do backend.
 export function BadgeStatus({
   status,
-  label,
   className,
 }: {
   status: StatusKey;
-  label: string;
   className?: string;
 }) {
+  const label = statusLabel(status);
   return (
     <span
       role="status"

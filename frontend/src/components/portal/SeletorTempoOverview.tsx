@@ -4,6 +4,9 @@
 // "por mês". Em "por mês" o usuário escolhe todos ou apenas alguns meses do ano selecionado.
 // Substitui os antigos filtros de período/mês de originação e o input de comparativo.
 
+import { X } from "lucide-react";
+
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -12,7 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const MESES = [
@@ -27,9 +33,11 @@ interface Props {
   anosDisponiveis: number[];
   porMes: boolean;
   meses: number[]; // meses selecionados (1-12) quando porMes
+  dia: string; // data de originação exata (ISO aaaa-mm-dd); "" = todos os dias
   onAno: (ano: number) => void;
   onPorMes: (porMes: boolean) => void;
   onMeses: (meses: number[]) => void;
+  onDia: (iso: string) => void;
 }
 
 export function SeletorTempoOverview({
@@ -37,9 +45,11 @@ export function SeletorTempoOverview({
   anosDisponiveis,
   porMes,
   meses,
+  dia,
   onAno,
   onPorMes,
   onMeses,
+  onDia,
 }: Props) {
   const anos = anosDisponiveis.length > 0 ? anosDisponiveis : [ano];
   const todosSelecionados = meses.length === 12;
@@ -67,16 +77,43 @@ export function SeletorTempoOverview({
             </SelectContent>
           </Select>
 
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Switch
+          <Field orientation="horizontal" className="w-auto">
+            <Checkbox
+              id="recorte-por-mes"
               checked={porMes}
-              onCheckedChange={onPorMes}
+              onCheckedChange={(v) => onPorMes(v === true)}
               aria-label="Recorte por mês"
             />
-            <span className={cn(!porMes && "text-muted-foreground")}>
+            <Label
+              htmlFor="recorte-por-mes"
+              className={cn("cursor-pointer text-sm font-normal", !porMes && "text-muted-foreground")}
+            >
               {porMes ? "Por mês" : "Ano inteiro"}
-            </span>
-          </label>
+            </Label>
+          </Field>
+
+          {/* Filtro por dia de originação (data do pedido) — calendário em popover. */}
+          <div className="flex items-center gap-1">
+            <DatePicker
+              value={dia}
+              onChange={onDia}
+              placeholder="Dia de originação"
+              className="h-9 w-[170px]"
+              aria-label="Filtrar por dia de originação"
+            />
+            {dia ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-9 shrink-0 text-muted-foreground"
+                aria-label="Limpar filtro de dia"
+                onClick={() => onDia("")}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {porMes ? (

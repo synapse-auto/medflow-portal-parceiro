@@ -51,13 +51,16 @@ roxo brilhante (item ativo, indicador lateral) · `--sidebar-accent` fundo do it
 
 ### Status de pagamento (só comunica estado, nunca decora)
 
-| Token | Significado |
-|---|---|
-| `--success` (verde) | Pago / em dia |
-| `--warning` (âmbar) | A pagar / vence em breve |
-| `--destructive`/`--danger` (vermelho `#DF3131`) | Atrasado / vencido |
+| Token | Rótulo (UI) | Significado |
+|---|---|---|
+| `--success` (verde) | **Pago** | quitado / em dia |
+| `--warning` (âmbar) | **A Vencer** | não pago, ainda dentro do prazo |
+| `--destructive`/`--danger` (vermelho `#DF3131`) | **Vencido** | não pago, prazo expirado |
 
 > Status nunca depende **só** de cor: sempre pílula com **ponto + rótulo** (a11y/daltônicos).
+> Rótulos de exibição vivem só no frontend (`lib/format.ts → STATUS_LABEL`); as chaves internas
+> e o `status_label` do backend continuam `pago`/`a_pagar`/`atrasado`. **Em Análise** (âmbar) é
+> o 4º estado, no nível de Unidade, quando há aviso de pagamento pendente (feature 004).
 
 ### Charts
 

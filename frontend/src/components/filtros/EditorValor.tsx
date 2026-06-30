@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatData, formatMoeda } from "@/lib/format";
@@ -123,7 +124,10 @@ function EditorMulti({ campo, opcao, valorInicial, onAplicar }: Props) {
 
 function EditorFaixa({ campo, opcao, valorInicial, onAplicar }: Props) {
   const [faixa, setFaixa] = useState<Faixa>(() => parseFaixa(valorInicial));
-  const tipoInput = campo.tipo === "date" ? "date" : "number";
+  const isData = campo.tipo === "date";
+
+  const set = (lado: "min" | "max", v: string) =>
+    setFaixa((f) => ({ ...f, [lado]: v }));
 
   const dica = (lado: "min" | "max"): string => {
     const v = lado === "min" ? opcao?.min : opcao?.max;
@@ -144,28 +148,46 @@ function EditorFaixa({ campo, opcao, valorInicial, onAplicar }: Props) {
       className="flex flex-col gap-2"
     >
       <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          De
-          <Input
-            type={tipoInput}
-            inputMode={tipoInput === "number" ? "decimal" : undefined}
-            value={faixa.min}
-            placeholder={dica("min")}
-            onChange={(e) => setFaixa((f) => ({ ...f, min: e.target.value }))}
-            className="h-8"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          Até
-          <Input
-            type={tipoInput}
-            inputMode={tipoInput === "number" ? "decimal" : undefined}
-            value={faixa.max}
-            placeholder={dica("max")}
-            onChange={(e) => setFaixa((f) => ({ ...f, max: e.target.value }))}
-            className="h-8"
-          />
-        </label>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">De</span>
+          {isData ? (
+            <DatePicker
+              value={faixa.min}
+              onChange={(v) => set("min", v)}
+              placeholder="dd/mm/aaaa"
+              aria-label={`${campo.label} — de`}
+            />
+          ) : (
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={faixa.min}
+              placeholder={dica("min")}
+              onChange={(e) => set("min", e.target.value)}
+              className="h-8"
+            />
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Até</span>
+          {isData ? (
+            <DatePicker
+              value={faixa.max}
+              onChange={(v) => set("max", v)}
+              placeholder="dd/mm/aaaa"
+              aria-label={`${campo.label} — até`}
+            />
+          ) : (
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={faixa.max}
+              placeholder={dica("max")}
+              onChange={(e) => set("max", e.target.value)}
+              className="h-8"
+            />
+          )}
+        </div>
       </div>
       <Rodape onLimpar={() => setFaixa({ min: "", max: "" })} podeLimpar={podeLimpar} />
     </form>

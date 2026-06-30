@@ -172,7 +172,7 @@ function AvisoEnviado({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: ()
         className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning-foreground transition-colors hover:bg-warning/20 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <Clock className="size-3.5" />
-        Aviso enviado
+        Em Análise
       </button>
 
       <Dialog open={aberto} onOpenChange={(o) => !cancelando && setAberto(o)}>

@@ -157,10 +157,12 @@ Métricas + série mensal (US4 parceiro / RF-021 gestor consolidado).
 
 **Query** — recorte temporal por **toggle ano/mês** (RF-019): `?ano=aaaa` (default: ano
 corrente) e, no modo "por mês", `?meses=1,2,...` (csv 1–12). Sem `meses` = ano inteiro.
-Os `cards` e a `serie_mensal` refletem esse recorte **mais** os **filtros dinâmicos**
-não-temporais da aba `overview` (ver §Filtros): `status`, `unidade`, `contratante` (só
-gestor). A `serie_mensal` cobre os meses do recorte (RF-020), formato `aaaa-mm`.
-`anos_disponiveis` lista os anos com dados (alimenta o seletor de ano).
+Opcional `?dia=aaaa-mm-dd` restringe à **data de originação** (`data_pedido`) exata daquele
+dia (drill-down via calendário; compõe com `ano`/`meses`). Os `cards` e a `serie_mensal`
+refletem esse recorte **mais** os **filtros dinâmicos** não-temporais da aba `overview`
+(ver §Filtros): `status`, `unidade`, `contratante` (só gestor). A `serie_mensal` cobre os
+meses do recorte (RF-020), formato `aaaa-mm`. `anos_disponiveis` lista os anos com dados
+(alimenta o seletor de ano).
 
 > **`total_cashback`** é o agregado do campo `cashback` (rótulo de produto: **Rebate**).
 > **`ticket_medio`** = `valor_total` ÷ médicos distintos = média dos totais por médico
@@ -287,6 +289,9 @@ registry do frontend; aqui só os valores. `multi` → `opcoes[]`; `range`/`date
   ]
 }
 ```
+> As opções de `status` são as **chaves** (`pago`/`a_pagar`/`atrasado`). O rótulo de exibição
+> é resolvido no frontend (`lib/format.ts → STATUS_LABEL`): **Pago / A Vencer / Vencido**.
+> O `status_label` no payload das solicitações segue inalterado (uso interno/legado).
 - `400` se `aba` inválida. Exige JWT como todas as rotas de dados.
 
 ---

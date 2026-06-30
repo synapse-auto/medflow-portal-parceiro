@@ -437,6 +437,12 @@ const colsSolicUnidade: Coluna<Solicitacao>[] = [
   { id: "cliente", header: "Cliente", cell: (s) => s.cliente },
   { id: "valor", header: "Originação", align: "right", cell: (s) => formatMoeda(s.valor) },
   {
+    id: "cashback",
+    header: "Rebate",
+    align: "right",
+    cell: (s) => <span className="text-success">{formatMoeda(s.cashback)}</span>,
+  },
+  {
     id: "data_vencimento",
     header: "Vencimento",
     align: "right",
@@ -446,7 +452,7 @@ const colsSolicUnidade: Coluna<Solicitacao>[] = [
     id: "status",
     header: "Status",
     align: "right",
-    cell: (s) => <BadgeStatus status={s.status} label={s.status_label} />,
+    cell: (s) => <BadgeStatus status={s.status} />,
   },
 ];
 
@@ -462,7 +468,7 @@ function UnidadeRow({ u }: { u: UnidadeVencimentos }) {
           className="flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           <span className="truncate text-sm font-medium">{u.unidade}</span>
-          <BadgeStatus status={u.status} label={u.status_label} />
+          <BadgeStatus status={u.status} />
           <span className="ml-auto text-sm font-semibold tabular-nums">{formatMoeda(u.total)}</span>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </button>
@@ -471,7 +477,7 @@ function UnidadeRow({ u }: { u: UnidadeVencimentos }) {
         <DialogHeader className="shrink-0 border-b p-4">
           <div className="flex items-center gap-3 pr-8">
             <DialogTitle className="truncate">{u.unidade}</DialogTitle>
-            <BadgeStatus status={u.status} label={u.status_label} />
+            <BadgeStatus status={u.status} />
             <span className="ml-auto text-sm font-semibold tabular-nums">{formatMoeda(u.total)}</span>
           </div>
           <DialogDescription>

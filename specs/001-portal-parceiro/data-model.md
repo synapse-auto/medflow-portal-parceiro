@@ -168,8 +168,14 @@ def status(quitado: bool, data_vencimento: date, hoje: date) -> str:
     return "a_pagar"                 # vencimento hoje => a_pagar
 ```
 
-Rótulos de exibição: `pago→"Pago"`, `a_pagar→"A Pagar"`, `atrasado→"Atrasado"`.
-Backend retorna `status` + `status_label` (DRY: frontend não recalcula).
+Backend retorna `status` (chave) + `status_label` (DRY: frontend não recalcula a regra).
+Chaves internas e `status_label` do backend permanecem `pago`/`a_pagar`/`atrasado`.
+
+**Rótulos de exibição (UI, só frontend)** — `frontend/src/lib/format.ts → STATUS_LABEL`,
+fonte única consumida por `BadgeStatus` e pelo registry de filtros:
+`pago→"Pago"`, `a_pagar→"A Vencer"`, `atrasado→"Vencido"`. O front **não** usa mais o
+`status_label` do backend para esses três. **Em Análise** é o 4º estado (nível de Unidade),
+disparado por aviso de pagamento pendente (feature 004) — não é status de solicitação.
 
 ---
 

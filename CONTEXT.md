@@ -62,7 +62,12 @@ _Avoid_: Quitado, Em dia, Zerado.
   os termos de pagamento pendente permanecem como estão.
 - Rebate (UI) vs Cashback: a planilha e os identificadores de código mantêm `cashback`;
   apenas o rótulo visível vira **Rebate**. Mesma regra para Originação vs `valor`.
-- **Em Análise**: 4º status de pagamento previsto para uma **Unidade**, ainda **sem gatilho**
-  (tarefa futura — ver spec gestor/Vencimentos). Não confundir com os 3 status atuais
-  (Pago / A Pagar / Atrasado). Enquanto o gatilho não existir, nenhuma Unidade fica
-  Em Análise e o botão "Verificar Pagamento" não aparece.
+- **Rótulos de status (UI)**: os 3 status de solicitação têm rótulo de exibição **só no
+  frontend** — chaves internas seguem `pago`/`a_pagar`/`atrasado` (e o `status_label` do
+  backend não muda). UI mostra: `pago→`**Pago**, `a_pagar→`**A Vencer**, `atrasado→`**Vencido**.
+  Fonte única: `frontend/src/lib/format.ts` (`STATUS_LABEL`), consumida por `BadgeStatus` e
+  pelo registry de filtros.
+- **Em Análise**: 4º status de pagamento, no nível de **Unidade**. Gatilho = aviso de pagamento
+  (feature 004): quando o parceiro clica em **Pagar** e o gestor **ainda não verificou**, a
+  unidade fica **Em Análise** (parceiro vê a pílula "Em Análise"; gestor vê o bloco "Em Análise"
+  com o botão "Verificar pagamento"). Verificado/rejeitado/cancelado encerram o estado.
