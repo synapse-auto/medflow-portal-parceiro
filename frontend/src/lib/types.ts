@@ -71,10 +71,15 @@ export interface Paginada<T> {
   has_more: boolean;
 }
 
+// Linha da aba Vencimentos do parceiro = um LOTE (unidade + data de vencimento).
+// Mesma unidade pode ter vários lotes (datas diferentes), pagos em separado. Unidade sem
+// pendência vira uma única linha "Tudo pago" (data_vencimento/dias nulos).
 export interface UnidadeVencimentosParceiro {
   unidade: string;
-  vencido: string; // Σ status atrasado
-  a_vencer: string; // Σ status a_pagar
+  data_vencimento: string | null; // ISO; null = linha "Tudo pago"
+  dias: number | null; // >0 vencido; <=0 a vencer (0 = hoje); null se tudo pago
+  vencido: string; // Σ status atrasado do lote
+  a_vencer: string; // Σ status a_pagar do lote
   total_pendente: string; // vencido + a_vencer (chave de ordenação)
   tudo_pago: boolean; // total_pendente == 0
   solicitacoes: Solicitacao[];
@@ -177,6 +182,7 @@ export interface PagamentoAviso {
   id: string;
   contratante: string;
   unidade: string;
+  data_vencimento: string | null; // ISO; lote (unidade + vencimento) coberto pelo aviso
   valor: string; // snapshot do total pendente no envio
   solicitacao_codigos: string[];
   status: AvisoStatus;
@@ -191,9 +197,10 @@ export interface MeusAvisos {
   avisos: Record<string, PagamentoAviso>;
 }
 
-// Unidade pendente sem aviso ativo (bloco "Falta aviso" do gestor).
+// Lote pendente sem aviso ativo (bloco "Falta aviso" do gestor).
 export interface UnidadeFaltaAviso {
   unidade: string;
+  data_vencimento: string | null; // ISO; vencimento do lote
   valor: string;
   motivo_rejeicao: string | null; // motivo do último aviso rejeitado, se houver
 }

@@ -44,6 +44,19 @@ export function formatData(iso: string | null | undefined): string {
   return DATE_BR.format(d);
 }
 
+/**
+ * Dias relativos ao vencimento: `>0` vencido (dias em atraso), `<=0` a vencer (0 = hoje).
+ * null se a data for ausente/inválida. Espelha o cálculo do backend (`hoje - venc`).
+ */
+export function diasVencimento(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const venc = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(venc.getTime())) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return Math.round((hoje.getTime() - venc.getTime()) / 86_400_000);
+}
+
 /** "2026-01" → "jan/2026" (rótulo de mês para gráficos). */
 export function formatMes(mes: string | null | undefined): string {
   if (!mes) return "—";

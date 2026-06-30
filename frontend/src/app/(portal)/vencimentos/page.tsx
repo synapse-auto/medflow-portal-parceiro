@@ -15,6 +15,7 @@ import { BarraFiltros } from "@/components/filtros/BarraFiltros";
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { DataTable, type Coluna } from "@/components/DataTable";
 import { StatCard } from "@/components/portal/StatCard";
+import { BadgePrazo } from "@/components/portal/BadgePrazo";
 import { ErroCarregamento } from "@/components/portal/ErroCarregamento";
 import { PagarUnidade } from "@/components/portal/ConfirmarPagamento";
 import { SecaoVencimentos } from "@/components/portal/SecaoVencimentos";
@@ -46,6 +47,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiGet } from "@/lib/api";
 import { useFiltros } from "@/lib/filtros/useFiltros";
 import { formatData, formatMoeda } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useMe } from "@/lib/useMe";
 import type {
   ContratanteVencimentos,
@@ -184,23 +186,27 @@ function VistaParceiro({
       </div>
 
       <Secao
-        titulo="Vencimentos por Unidade"
-        descricao="Vencido (vermelho) e a vencer (roxo) por unidade. Abra para ver as solicitações."
+        titulo="Vencimentos"
+        descricao="Cada barra é um lote (unidade + data de vencimento), pago em separado. Prazo em vermelho quando vencido. Abra para ver as solicitações."
       >
         {unidades.length > 0 ? (
           <Accordion type="multiple" className="flex flex-col gap-2">
-            {unidades.map((u) => (
-              <UnidadeLinhaParceiro
-                key={u.unidade}
-                u={u}
-                maxPendente={maxPendente}
-                aviso={avisos[u.unidade]}
-                onMutate={recarregarAvisos}
-              />
-            ))}
+            {unidades.map((u) => {
+              const chave = chaveLote(u.unidade, u.data_vencimento);
+              return (
+                <UnidadeLinhaParceiro
+                  key={chave}
+                  chave={chave}
+                  u={u}
+                  maxPendente={maxPendente}
+                  aviso={avisos[chave]}
+                  onMutate={recarregarAvisos}
+                />
+              );
+            })}
           </Accordion>
         ) : (
-          <EmptyVenc titulo="Nenhuma unidade" descricao="Sem dados de vencimento." />
+          <EmptyVenc titulo="Nenhum vencimento" descricao="Sem dados de vencimento." />
         )}
       </Secao>
 
@@ -261,9 +267,13 @@ function VistaParceiro({
   );
 }
 
+type AgruparGestor = "unidade" | "vencimento";
+
 function VistaGestor({ data }: { data: VencimentosGestor }) {
   // Defesa: payload pode chegar parcial — normaliza array.
   const contratantes = data.contratantes ?? [];
+  // Toggle de visualização: abrir a contratante por unidade (agregada) ou por lote/vencimento.
+  const [agrupar, setAgrupar] = useState<AgruparGestor>("unidade");
   // Escala compartilhada: a maior pendência define 100% da barra (comparável entre parceiros).
   const maxPendente = Math.max(
     ...contratantes.map((c) => Number(c.total_pendente) || 0),
@@ -277,13 +287,26 @@ function VistaGestor({ data }: { data: VencimentosGestor }) {
       </div>
 
       <Secao
-        titulo="Vencimentos por parceiro"
-        descricao="Vencido (vermelho) e a vencer (roxo) por contratante. Abra para ver as unidades."
+        titulo="Vencimentos"
+        descricao="Vencido (vermelho) e a vencer (roxo) por contratante. Abra para ver as unidades ou os vencimentos."
+        acao={
+          <Select value={agrupar} onValueChange={(v) => setAgrupar(v as AgruparGestor)}>
+            <SelectTrigger className="h-9 w-[190px]" aria-label="Agrupar contratante por">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="unidade">Agrupar por unidade</SelectItem>
+                <SelectItem value="vencimento">Agrupar por vencimento</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        }
       >
         {contratantes.length > 0 ? (
           <Accordion type="multiple" className="flex flex-col gap-2">
             {contratantes.map((c) => (
-              <ContratanteLinha key={c.contratante} c={c} maxPendente={maxPendente} />
+              <ContratanteLinha key={c.contratante} c={c} maxPendente={maxPendente} agrupar={agrupar} />
             ))}
           </Accordion>
         ) : (
@@ -294,12 +317,45 @@ function VistaGestor({ data }: { data: VencimentosGestor }) {
   );
 }
 
+// Chave do lote (unidade + data ISO) — espelha `chave_lote` do backend (mapa de avisos).
+function chaveLote(unidade: string, data: string | null): string {
+  return `${unidade}|${data ?? ""}`;
+}
+
+interface LoteGestor {
+  unidade: string;
+  data: string;
+  total: number;
+  sols: Solicitacao[];
+}
+
+// Regroup client-side: contratante → lotes (unidade + data de vencimento) pendentes. Usa as
+// solicitações já enviadas por unidade (cada uma traz data_vencimento); pagas ficam de fora.
+function lotesDoContratante(c: ContratanteVencimentos): LoteGestor[] {
+  const map = new Map<string, LoteGestor>();
+  for (const u of c.unidades ?? []) {
+    for (const s of u.solicitacoes ?? []) {
+      if (s.status === "pago") continue;
+      const key = chaveLote(u.unidade, s.data_vencimento);
+      const e = map.get(key) ?? { unidade: u.unidade, data: s.data_vencimento, total: 0, sols: [] };
+      e.total += Number(s.valor || 0);
+      e.sols.push(s);
+      map.set(key, e);
+    }
+  }
+  return [...map.values()].sort((a, b) =>
+    a.unidade !== b.unidade ? a.unidade.localeCompare(b.unidade) : a.data < b.data ? -1 : 1,
+  );
+}
+
 function ContratanteLinha({
   c,
   maxPendente,
+  agrupar,
 }: {
   c: ContratanteVencimentos;
   maxPendente: number;
+  agrupar: AgruparGestor;
 }) {
   return (
     <AccordionItem
@@ -332,12 +388,14 @@ function ContratanteLinha({
           )}
         </div>
       </AccordionTrigger>
-      {/* Unidades como linhas simples (sem accordion aninhado — evita clip de altura). */}
+      {/* Linhas simples (sem accordion aninhado — evita clip de altura): unidades ou lotes. */}
       <AccordionContent className="bg-muted/20 px-3 pt-1 pb-3">
         <div className="flex flex-col gap-1.5">
-          {(c.unidades ?? []).map((u) => (
-            <UnidadeRow key={u.unidade} u={u} />
-          ))}
+          {agrupar === "vencimento"
+            ? lotesDoContratante(c).map((l) => (
+                <LoteRow key={chaveLote(l.unidade, l.data)} lote={l} />
+              ))
+            : (c.unidades ?? []).map((u) => <UnidadeRow key={u.unidade} u={u} />)}
         </div>
       </AccordionContent>
     </AccordionItem>
@@ -347,11 +405,13 @@ function ContratanteLinha({
 // Linha de unidade na visão do parceiro: barra segmentada (igual gestor, nível unidade);
 // expandir mostra a tabela de solicitações da unidade (todos os status).
 function UnidadeLinhaParceiro({
+  chave,
   u,
   maxPendente,
   aviso,
   onMutate,
 }: {
+  chave: string;
   u: UnidadeVencimentosParceiro;
   maxPendente: number;
   aviso?: PagamentoAviso;
@@ -359,7 +419,7 @@ function UnidadeLinhaParceiro({
 }) {
   return (
     <AccordionItem
-      value={u.unidade}
+      value={chave}
       className="overflow-hidden rounded-xl border bg-card not-last:border-b"
     >
       {/* Trigger + controle "Pagar" como IRMÃOS (nunca <button> dentro de <button>).
@@ -367,7 +427,7 @@ function UnidadeLinhaParceiro({
       <div className="flex items-center gap-2 pr-3 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1">
         <AccordionTrigger className="min-h-[3.75rem] items-center px-4 py-3 hover:no-underline data-[state=open]:bg-muted/40">
           <div className="flex flex-1 items-center gap-3">
-            <span className="w-44 shrink-0 truncate text-sm font-medium">{u.unidade}</span>
+            <span className="w-40 shrink-0 truncate text-sm font-medium">{u.unidade}</span>
             {u.tudo_pago ? (
               <>
                 <div className="flex-1" />
@@ -378,12 +438,16 @@ function UnidadeLinhaParceiro({
               </>
             ) : (
               <>
+                {/* Prazo do lote em destaque (vermelho se vencido). */}
+                <BadgePrazo data={u.data_vencimento} />
+                {/* Barra com largura máxima reduzida p/ dar espaço ao prazo. */}
                 <BarraSegmentada
                   vencido={Number(u.vencido) || 0}
                   aVencer={Number(u.a_vencer) || 0}
                   max={maxPendente}
+                  className="max-w-[12rem]"
                 />
-                <span className="w-32 shrink-0 text-right text-sm font-semibold tabular-nums">
+                <span className="w-28 shrink-0 text-right text-sm font-semibold tabular-nums">
                   {formatMoeda(u.total_pendente)}
                 </span>
               </>
@@ -403,13 +467,15 @@ function BarraSegmentada({
   vencido,
   aVencer,
   max,
+  className,
 }: {
   vencido: number;
   aVencer: number;
   max: number;
+  className?: string;
 }) {
   return (
-    <div className="flex h-3 flex-1 overflow-hidden rounded-full bg-muted">
+    <div className={cn("flex h-3 flex-1 overflow-hidden rounded-full bg-muted", className)}>
       {vencido > 0 ? (
         <div
           className="h-full bg-destructive/75 transition-[width] duration-300"
@@ -486,6 +552,45 @@ function UnidadeRow({ u }: { u: UnidadeVencimentos }) {
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <DataTable colunas={colsSolicUnidade} itens={solicitacoes} getKey={(s) => s.codigo} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Lote (unidade + vencimento) na visão do gestor: prazo + valor; abre janela com as solicitações.
+function LoteRow({ lote }: { lote: LoteGestor }) {
+  const n = lote.sols.length;
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          <span className="truncate text-sm font-medium">{lote.unidade}</span>
+          <BadgePrazo data={lote.data} />
+          <span className="ml-auto text-sm font-semibold tabular-nums">
+            {formatMoeda(String(lote.total))}
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogHeader className="shrink-0 border-b p-4">
+          <div className="flex flex-wrap items-center gap-3 pr-8">
+            <DialogTitle className="truncate">{lote.unidade}</DialogTitle>
+            <BadgePrazo data={lote.data} />
+            <span className="ml-auto text-sm font-semibold tabular-nums">
+              {formatMoeda(String(lote.total))}
+            </span>
+          </div>
+          <DialogDescription>
+            {n} solicitaç{n === 1 ? "ão" : "ões"} a vencer em {formatData(lote.data)}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <DataTable colunas={colsSolicUnidade} itens={lote.sols} getKey={(s) => s.codigo} />
         </div>
       </DialogContent>
     </Dialog>

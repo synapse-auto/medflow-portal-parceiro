@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { StatCard } from "@/components/portal/StatCard";
+import { BadgePrazo } from "@/components/portal/BadgePrazo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -210,8 +211,11 @@ function AvisoCard({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: () =>
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold">{aviso.unidade}</p>
-          <p className="text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate font-semibold">{aviso.unidade}</p>
+            <BadgePrazo data={aviso.data_vencimento} />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
             Enviado em {formatData(aviso.created_at?.slice(0, 10))}
             {verificado && aviso.verificado_at
               ? ` · verificado em ${formatData(aviso.verificado_at.slice(0, 10))}`
@@ -317,8 +321,8 @@ function AcaoRejeitar({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: ()
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">Rejeitar aviso</DialogTitle>
             <DialogDescription>
-              {aviso.unidade} · {formatMoeda(aviso.valor)}. Informe o motivo — o parceiro verá e poderá
-              enviar um novo aviso.
+              {aviso.unidade} · venc. {formatData(aviso.data_vencimento)} · {formatMoeda(aviso.valor)}.
+              Informe o motivo — o parceiro verá e poderá enviar um novo aviso.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -372,7 +376,10 @@ function FaltaRow({ u }: { u: UnidadeFaltaAviso }) {
     <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/20 px-3 py-2.5">
       <ShieldQuestion className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{u.unidade}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-medium">{u.unidade}</p>
+          <BadgePrazo data={u.data_vencimento} />
+        </div>
         {u.motivo_rejeicao ? (
           <p className="truncate text-xs text-destructive" title={u.motivo_rejeicao}>
             Aviso anterior rejeitado: {u.motivo_rejeicao}

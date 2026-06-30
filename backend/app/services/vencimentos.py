@@ -63,52 +63,79 @@ def vencimentos_parceiro(
             "n_atrasadas": len(atrasados),
             "n_a_pagar": len(a_pagar),
         },
-        "unidades": _unidades_parceiro(escopadas),
+        "unidades": _unidades_parceiro(escopadas, hoje),
         "atrasados": [serializa_solicitacao(s) for s in atrasados],
         "proximos": [serializa_solicitacao(s) for s in proximos_lista],
         "pagos": [serializa_solicitacao(s) for s in pagos],
     }
 
 
-def _unidades_parceiro(sols: list[Solicitacao]) -> list[dict]:
-    """Unidades do parceiro como barra segmentada (espelha RF-024 gestor, nível unidade).
+def _unidades_parceiro(sols: list[Solicitacao], hoje: date) -> list[dict]:
+    """Linhas de vencimento do parceiro: um LOTE por (unidade, data de vencimento) pendente.
 
-    Cada unidade: vencido (atrasado) + a_vencer (a pagar) p/ a barra, total_pendente como
-    chave de ordenação e a lista completa de solicitações (todos os status). Sem campos de
-    gestor — escopo R-001. Ordena por pendência desc, depois nome; "Tudo pago" cai no fim.
+    Pagamento é por lote (unidade + prazo): a mesma unidade pode ter vários vencimentos em
+    datas diferentes, cada um avisado/pago em separado (ex.: 10 solic. p/ 24/06 + 25 p/ 06/07
+    na mesma unidade = duas linhas). Cada lote traz vencido/a_vencer (barra), total_pendente,
+    `data_vencimento` e `dias` (>0 = vencido → vermelho no front). Unidade sem pendência vira
+    uma única linha "Tudo pago" (data nula). Sem campos de gestor — escopo R-001.
+
+    Ordena unidades por pendência desc, depois nome; dentro da unidade, lotes por data asc;
+    unidades "Tudo pago" caem no fim.
     """
     por_unidade: dict[str, list[Solicitacao]] = defaultdict(list)
     for s in sols:
         por_unidade[s.unidade].append(s)
 
-    grupos = []
+    unidades = []
     for unidade, lista in por_unidade.items():
-        vencido = sum((s.valor for s in lista if s.status == STATUS_ATRASADO), Decimal("0"))
-        a_vencer = sum((s.valor for s in lista if s.status == STATUS_A_PAGAR), Decimal("0"))
-        total_pendente = vencido + a_vencer
-        lista.sort(key=lambda s: s.data_vencimento)
-        grupos.append(
-            {
-                "unidade": unidade,
-                "vencido": vencido,
-                "a_vencer": a_vencer,
-                "total_pendente": total_pendente,
-                "solicitacoes": lista,
-            }
-        )
-    grupos.sort(key=lambda g: (-g["total_pendente"], g["unidade"]))
+        pendentes = [s for s in lista if _pendente(s)]
+        total_pendente = sum((s.valor for s in pendentes), Decimal("0"))
+        unidades.append((unidade, lista, pendentes, total_pendente))
+    unidades.sort(key=lambda t: (-t[3], t[0]))
 
-    return [
-        {
-            "unidade": g["unidade"],
-            "vencido": money_str(g["vencido"]),
-            "a_vencer": money_str(g["a_vencer"]),
-            "total_pendente": money_str(g["total_pendente"]),
-            "tudo_pago": g["total_pendente"] == 0,
-            "solicitacoes": [serializa_solicitacao(s) for s in g["solicitacoes"]],
-        }
-        for g in grupos
-    ]
+    linhas: list[dict] = []
+    for unidade, lista, pendentes, total_pendente in unidades:
+        if total_pendente == 0:
+            # Unidade sem pendência: linha única "Tudo pago" (mantém a visão; pagas vivem
+            # também na seção "Vencimentos Pagos"). Mostra todas as solicitações da unidade.
+            lista.sort(key=lambda s: s.data_vencimento)
+            linhas.append(_linha_paga(unidade, lista))
+            continue
+        por_data: dict[date, list[Solicitacao]] = defaultdict(list)
+        for s in pendentes:
+            por_data[s.data_vencimento].append(s)
+        for venc in sorted(por_data):
+            linhas.append(_linha_lote(unidade, venc, por_data[venc], hoje))
+    return linhas
+
+
+def _linha_paga(unidade: str, lista: list[Solicitacao]) -> dict:
+    return {
+        "unidade": unidade,
+        "data_vencimento": None,
+        "dias": None,
+        "vencido": "0.00",
+        "a_vencer": "0.00",
+        "total_pendente": "0.00",
+        "tudo_pago": True,
+        "solicitacoes": [serializa_solicitacao(s) for s in lista],
+    }
+
+
+def _linha_lote(unidade: str, venc: date, lote: list[Solicitacao], hoje: date) -> dict:
+    vencido = sum((s.valor for s in lote if s.status == STATUS_ATRASADO), Decimal("0"))
+    a_vencer = sum((s.valor for s in lote if s.status == STATUS_A_PAGAR), Decimal("0"))
+    lote.sort(key=lambda s: s.codigo)
+    return {
+        "unidade": unidade,
+        "data_vencimento": venc.isoformat(),
+        "dias": (hoje - venc).days,  # >0 vencido; <=0 a vencer (0 = hoje)
+        "vencido": money_str(vencido),
+        "a_vencer": money_str(a_vencer),
+        "total_pendente": money_str(vencido + a_vencer),
+        "tudo_pago": False,
+        "solicitacoes": [serializa_solicitacao(s) for s in lote],
+    }
 
 
 def _status_unidade(sols: list[Solicitacao]) -> str:

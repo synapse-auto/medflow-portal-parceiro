@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BadgePrazo } from "@/components/portal/BadgePrazo";
 import { ApiError, apiSend } from "@/lib/api";
 import { formatData, formatMoeda } from "@/lib/format";
 import type { PagamentoAviso, UnidadeVencimentosParceiro } from "@/lib/types";
@@ -71,7 +72,10 @@ function BotaoPagar({
   async function confirmar() {
     setEnviando(true);
     try {
-      await apiSend("POST", "/api/pagamentos/avisos", { unidade: unidade.unidade });
+      await apiSend("POST", "/api/pagamentos/avisos", {
+        unidade: unidade.unidade,
+        data_vencimento: unidade.data_vencimento,
+      });
       toast.success("Aviso de pagamento enviado aos gestores.");
       setAberto(false);
       onMutate();
@@ -105,24 +109,30 @@ function BotaoPagar({
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">Confirmar pagamento</DialogTitle>
             <DialogDescription>
-              Avise os gestores que esta unidade foi paga. Isso <strong>não</strong> altera o status
-              automaticamente — os gestores verificam e atualizam manualmente.
+              Avise os gestores que este vencimento da unidade foi pago. Isso{" "}
+              <strong>não</strong> altera o status automaticamente — os gestores verificam e
+              atualizam manualmente.
             </DialogDescription>
           </DialogHeader>
 
-          {/* Valor em ênfase */}
-          <div className="rounded-xl border bg-muted/30 p-5 text-center">
+          {/* Valor + prazo em ênfase */}
+          <div className="flex flex-col items-center gap-2 rounded-xl border bg-muted/30 p-5 text-center">
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Valor da unidade
+              Valor deste vencimento
             </p>
-            <p className="mt-1 font-display text-4xl font-bold tabular-nums text-primary">
+            <p className="font-display text-4xl font-bold tabular-nums text-primary">
               {formatMoeda(unidade.total_pendente)}
             </p>
+            <BadgePrazo data={unidade.data_vencimento} />
           </div>
 
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
             <dt className="text-muted-foreground">Unidade</dt>
             <dd className="text-right font-medium">{unidade.unidade}</dd>
+            <dt className="text-muted-foreground">Vencimento</dt>
+            <dd className="text-right font-medium tabular-nums">
+              {formatData(unidade.data_vencimento)}
+            </dd>
             <dt className="text-muted-foreground">Solicitações</dt>
             <dd className="text-right font-medium tabular-nums">{nPendentes}</dd>
           </dl>
@@ -187,6 +197,10 @@ function AvisoEnviado({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: ()
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
             <dt className="text-muted-foreground">Unidade</dt>
             <dd className="text-right font-medium">{aviso.unidade}</dd>
+            <dt className="text-muted-foreground">Vencimento</dt>
+            <dd className="text-right font-medium tabular-nums">
+              {formatData(aviso.data_vencimento)}
+            </dd>
             <dt className="text-muted-foreground">Valor</dt>
             <dd className="text-right font-medium tabular-nums">{formatMoeda(aviso.valor)}</dd>
             <dt className="text-muted-foreground">Enviado em</dt>

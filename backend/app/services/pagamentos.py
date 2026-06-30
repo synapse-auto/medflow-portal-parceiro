@@ -14,7 +14,7 @@ tabela; o frontend jamais fala com o Postgres direto.
 """
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from supabase import Client
@@ -50,15 +50,15 @@ def _pendente(s: Solicitacao) -> bool:
     return s.status in (STATUS_ATRASADO, STATUS_A_PAGAR)
 
 
-def snapshot_unidade(sols_da_unidade: list[Solicitacao]) -> tuple[Decimal, list[str]]:
+def snapshot_lote(sols_do_lote: list[Solicitacao]) -> tuple[Decimal, list[str]]:
     """Congela o que o aviso cobre: total pendente + códigos das solicitações pendentes.
 
-    Pagas não entram (não é o que se paga agora). `valor` = Σ das pendentes = o "valor inteiro"
-    devido pela unidade. Levanta erro se não houver nada pendente (nada a avisar).
+    O lote = (unidade, data de vencimento). Pagas não entram (não é o que se paga agora);
+    `valor` = Σ das pendentes do lote. Levanta erro se não houver nada pendente (nada a avisar).
     """
-    pendentes = [s for s in sols_da_unidade if _pendente(s)]
+    pendentes = [s for s in sols_do_lote if _pendente(s)]
     if not pendentes:
-        raise PagamentoAvisoError("A unidade não possui valores pendentes para avisar.")
+        raise PagamentoAvisoError("O lote não possui valores pendentes para avisar.")
     valor = sum((s.valor for s in pendentes), Decimal("0"))
     codigos = [s.codigo for s in pendentes]
     return valor, codigos
@@ -71,6 +71,7 @@ def _serializa(row: dict) -> dict:
         "id": str(row["id"]),
         "contratante": row["contratante"],
         "unidade": row["unidade"],
+        "data_vencimento": row.get("data_vencimento"),
         "valor": money_str(Decimal(str(row["valor"]))),
         "solicitacao_codigos": row.get("solicitacao_codigos") or [],
         "status": status,
@@ -81,19 +82,25 @@ def _serializa(row: dict) -> dict:
     }
 
 
-def monta_meus_avisos(avisos: list[dict]) -> dict:
-    """Visão do parceiro p/ a aba Vencimentos: mapa `unidade → aviso vigente`.
+def chave_lote(unidade: str, data_vencimento: str | None) -> str:
+    """Chave do lote (unidade + data ISO) usada no mapa de avisos do parceiro. DRY com o front."""
+    return f"{unidade}|{data_vencimento or ''}"
 
-    Vigente = o aviso mais recente não-cancelado da unidade. Define o estado da linha:
-    pendente (enviado/cancelável) · verificado (travado) · rejeitado (mostra motivo, libera novo).
+
+def monta_meus_avisos(avisos: list[dict]) -> dict:
+    """Visão do parceiro p/ a aba Vencimentos: mapa `lote → aviso vigente`.
+
+    Lote = (unidade, data de vencimento) — chave `"unidade|data"`. Vigente = o aviso mais
+    recente não-cancelado do lote. Define o estado da linha: pendente (enviado/cancelável) ·
+    verificado (travado) · rejeitado (mostra motivo, libera novo).
     """
-    por_unidade: dict[str, dict] = {}
+    por_lote: dict[str, dict] = {}
     # created_at ISO ordena lexicograficamente; ascendente => o último visto é o mais recente.
     for row in sorted(avisos, key=lambda r: r.get("created_at") or ""):
         if row["status"] == AVISO_CANCELADO:
             continue
-        por_unidade[row["unidade"]] = _serializa(row)
-    return {"avisos": por_unidade}
+        por_lote[chave_lote(row["unidade"], row.get("data_vencimento"))] = _serializa(row)
+    return {"avisos": por_lote}
 
 
 def monta_visao_gestor(
@@ -110,28 +117,31 @@ def monta_visao_gestor(
     """
     cores = cores or {}
 
-    # Pendência atual por contratante → unidade (fonte: sheet).
-    pend: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: Decimal("0")))
+    # Pendência atual por contratante → lote (unidade, data de vencimento). Fonte: sheet.
+    pend: dict[str, dict[tuple[str, str], Decimal]] = defaultdict(
+        lambda: defaultdict(lambda: Decimal("0"))
+    )
     for s in validas:
         if s.unidade and _pendente(s):
-            pend[s.contratante][s.unidade] += s.valor
+            pend[s.contratante][(s.unidade, s.data_vencimento.isoformat())] += s.valor
 
-    # Avisos agrupados (ignora cancelados).
+    # Avisos agrupados (ignora cancelados). Chave do lote ativo = (unidade, data ISO).
     aguardando: dict[str, list[dict]] = defaultdict(list)
     verificadas: dict[str, list[dict]] = defaultdict(list)
-    ativos: dict[str, set[str]] = defaultdict(set)
-    rejeicao: dict[str, dict[str, str]] = defaultdict(dict)  # contratante→unidade→motivo (último)
+    ativos: dict[str, set[tuple[str, str]]] = defaultdict(set)
+    rejeicao: dict[str, dict[tuple[str, str], str]] = defaultdict(dict)  # →lote→motivo (último)
     for row in sorted(avisos, key=lambda r: r.get("created_at") or ""):
-        c, u, status = row["contratante"], row["unidade"], row["status"]
+        c, status = row["contratante"], row["status"]
+        lote = (row["unidade"], row.get("data_vencimento") or "")
         if status == AVISO_PENDENTE:
             aguardando[c].append(_serializa(row))
-            ativos[c].add(u)
+            ativos[c].add(lote)
         elif status == AVISO_VERIFICADO:
             verificadas[c].append(_serializa(row))
-            ativos[c].add(u)
+            ativos[c].add(lote)
         elif status == AVISO_REJEITADO:
             if row.get("motivo_rejeicao"):
-                rejeicao[c][u] = row["motivo_rejeicao"]  # asc => fica o mais recente
+                rejeicao[c][lote] = row["motivo_rejeicao"]  # asc => fica o mais recente
 
     contratantes_keys = set(pend) | set(aguardando) | set(verificadas)
     contratantes = []
@@ -139,13 +149,14 @@ def monta_visao_gestor(
         falta = [
             {
                 "unidade": u,
+                "data_vencimento": d,
                 "valor": money_str(valor),
-                "motivo_rejeicao": rejeicao[c].get(u),
+                "motivo_rejeicao": rejeicao[c].get((u, d)),
             }
-            for u, valor in pend[c].items()
-            if u not in ativos[c]
+            for (u, d), valor in pend[c].items()
+            if (u, d) not in ativos[c]
         ]
-        falta.sort(key=lambda f: (Decimal(f["valor"]) * -1, f["unidade"]))
+        falta.sort(key=lambda f: (Decimal(f["valor"]) * -1, f["unidade"], f["data_vencimento"]))
         # Recentes primeiro nas listas de avisos.
         ag = sorted(aguardando[c], key=lambda a: a.get("created_at") or "", reverse=True)
         ve = sorted(verificadas[c], key=lambda a: a.get("created_at") or "", reverse=True)
@@ -210,12 +221,19 @@ class PagamentosService:
     # ---- Escrita -----------------------------------------------------------------
 
     def criar(
-        self, contratante: str, unidade: str, valor: Decimal, codigos: list[str]
+        self,
+        contratante: str,
+        unidade: str,
+        data_vencimento: date,
+        valor: Decimal,
+        codigos: list[str],
     ) -> dict:
-        """Cria aviso (pendente). O índice único barra 2º aviso ativo da mesma unidade."""
+        """Cria aviso (pendente). O índice único barra 2º aviso ativo do mesmo lote
+        (contratante, unidade, data de vencimento)."""
         payload = {
             "contratante": contratante,
             "unidade": unidade,
+            "data_vencimento": data_vencimento.isoformat(),
             "valor": str(valor),
             "solicitacao_codigos": codigos,
             "status": AVISO_PENDENTE,
@@ -225,7 +243,7 @@ class PagamentosService:
         except Exception as exc:  # noqa: BLE001 — vira erro de domínio legível
             if _is_unique_violation(exc):
                 raise PagamentoAvisoError(
-                    "Já existe um aviso ativo para esta unidade."
+                    "Já existe um aviso ativo para este vencimento da unidade."
                 ) from exc
             raise PagamentoAvisoError("Não foi possível registrar o aviso.") from exc
         return _serializa(resp.data[0])

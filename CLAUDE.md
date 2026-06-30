@@ -35,10 +35,12 @@ gestor. Escopo do parceiro = Contratante **E** Unidade∈allowlist (`domain/scop
 - Frontend: `app/(portal)/parceiros/page.tsx`, `components/portal/EditorUnidades.tsx`
 
 ## Feature: Avisos de Pagamento por Unidade (004)
-Parceiro avisa pagamento por **Unidade** (botão "Pagar" na aba Vencimentos); gestor verifica/
+Parceiro avisa pagamento por **lote = (Unidade + data de vencimento)** (botão "Pagar" na aba
+Vencimentos — mesma unidade pode ter vários vencimentos, pagos em separado); gestor verifica/
 rejeita na aba "Pagamentos". NÃO toca sheet/CRM — status financeiro segue manual na planilha.
 Snapshot congela valor+códigos no envio. 1ª tabela Postgres do portal (`pagamentos_avisos`,
-service role, RLS deny-all). Estados: pendente→(cancelado|verificado|rejeitado); verificado→pendente.
-- ADR: `docs/adr/0003-avisos-pagamento.md` · Migration: `supabase/migrations/20260629_pagamentos_avisos.sql`
+service role, RLS deny-all; aviso ativo único por `(contratante,unidade,data_vencimento)`).
+Estados: pendente→(cancelado|verificado|rejeitado); verificado→pendente.
+- ADR: `docs/adr/0003-avisos-pagamento.md` · Migrations: `supabase/migrations/20260629_pagamentos_avisos.sql` + `20260630_pagamentos_avisos_data_vencimento.sql`
 - Backend: `app/services/pagamentos.py`, `app/routers/pagamentos.py` (`/api/pagamentos/*`)
 - Frontend: `app/(portal)/pagamentos/page.tsx`, `components/portal/ConfirmarPagamento.tsx`

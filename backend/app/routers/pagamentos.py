@@ -6,14 +6,13 @@ rejeitar / reabrir. Isolamento (R-001): o snapshot do aviso vem SEMPRE do datase
 do parceiro — o corpo do request só informa qual unidade.
 """
 
-from collections import defaultdict
+from datetime import date
 
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
 
 from app.auth.deps import CurrentUser, GestorUser
 from app.auth.supabase import get_supabase_auth
-from app.domain.models import Solicitacao
 from app.domain.scope import filtra_por_escopo, is_gestor
 from app.services.dataset import get_dataset_service
 from app.services.pagamentos import (
@@ -21,7 +20,7 @@ from app.services.pagamentos import (
     PagamentosService,
     monta_meus_avisos,
     monta_visao_gestor,
-    snapshot_unidade,
+    snapshot_lote,
 )
 from app.services.partners import PartnersService
 
@@ -30,6 +29,7 @@ router = APIRouter(prefix="/api/pagamentos", tags=["pagamentos"])
 
 class AvisoIn(BaseModel):
     unidade: str
+    data_vencimento: date
 
 
 class RejeitarIn(BaseModel):
@@ -52,26 +52,30 @@ def _bad_request(exc: PagamentoAvisoError) -> HTTPException:
 
 @router.post("/avisos", status_code=status.HTTP_201_CREATED)
 def criar_aviso(body: AvisoIn, user: CurrentUser) -> dict:
-    """Parceiro avisa o pagamento de UMA unidade. Valor + códigos congelados no servidor."""
+    """Parceiro avisa o pagamento de UM lote (unidade + data de vencimento).
+
+    Valor + códigos congelados no servidor a partir do dataset já escopado (R-001) — o corpo
+    só informa qual unidade e qual vencimento.
+    """
     if is_gestor(user) or not user.contratante:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "forbidden", "message": "Apenas parceiros enviam avisos."},
         )
     escopadas = filtra_por_escopo(get_dataset_service().get().validas, user)
-    por_unidade: dict[str, list[Solicitacao]] = defaultdict(list)
-    for s in escopadas:
-        if s.unidade:
-            por_unidade[s.unidade].append(s)
-    sols = por_unidade.get(body.unidade)
+    sols = [
+        s
+        for s in escopadas
+        if s.unidade == body.unidade and s.data_vencimento == body.data_vencimento
+    ]
     if not sols:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "not_found", "message": "Unidade não encontrada no seu escopo."},
+            detail={"code": "not_found", "message": "Vencimento não encontrado no seu escopo."},
         )
     try:
-        valor, codigos = snapshot_unidade(sols)
-        return _service().criar(user.contratante, body.unidade, valor, codigos)
+        valor, codigos = snapshot_lote(sols)
+        return _service().criar(user.contratante, body.unidade, body.data_vencimento, valor, codigos)
     except PagamentoAvisoError as exc:
         raise _bad_request(exc) from exc
 

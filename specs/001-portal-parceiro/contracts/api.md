@@ -109,7 +109,7 @@ Cards + seções (US1 parceiro / RF-024 gestor).
 ```json
 {
   "cards": { "total_pendente":"52675.00", "em_atraso":"52675.00", "n_atrasadas":2, "n_a_pagar":0 },
-  "unidades": [ /* barra segmentada por unidade: {unidade, vencido, a_vencer, total_pendente, tudo_pago, solicitacoes[]}; ordena por total_pendente desc, tudo_pago no fim */ ],
+  "unidades": [ /* uma linha por LOTE (unidade + data de vencimento): {unidade, data_vencimento, dias, vencido, a_vencer, total_pendente, tudo_pago, solicitacoes[]}. `dias`>0 = vencido (vermelho no front), <=0 a vencer. Unidade sem pendência vira UMA linha "tudo_pago" (data_vencimento/dias nulos, com todas as solicitações). Ordena unidades por pendência desc; dentro da unidade, lotes por data asc; tudo_pago no fim. Pagamento é por lote. */ ],
   "atrasados": [ /* itens (mesmo shape de solicitações) */ ],
   "proximos":  [ /* itens que vencem até o filtro */ ],
   "pagos":     [ /* solicitações pagas — status Pago (RF-017) */ ]

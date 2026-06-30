@@ -54,29 +54,49 @@ def test_parceiro_nao_ve_outro_contratante():
     assert "4" not in codigos  # solicitação de AH nunca aparece
 
 
-def test_parceiro_unidades_segmentadas_e_escopadas():
+def test_parceiro_lotes_por_unidade_e_data_e_escopo():
+    venc_atraso = HOJE - timedelta(days=3)
+    venc_futuro = HOJE + timedelta(days=3)
     dataset = [
-        _sol(BESA, "1", "atrasado", "1000", HOJE - timedelta(days=3), unidade="UA"),
-        _sol(BESA, "2", "a_pagar", "500", HOJE + timedelta(days=3), unidade="UA"),
+        # UA: mesma unidade, dois vencimentos diferentes → DOIS lotes separados.
+        _sol(BESA, "1", "atrasado", "1000", venc_atraso, unidade="UA"),
+        _sol(BESA, "2", "a_pagar", "500", venc_futuro, unidade="UA"),
         _sol(BESA, "3", "pago", "700", HOJE - timedelta(days=10), unidade="UB"),
         _sol(AH, "4", "atrasado", "9999", HOJE - timedelta(days=1), unidade="UX"),
     ]
     out = vencimentos_parceiro(dataset, _user("parceiro", BESA), hoje=HOJE)
-    unidades = {u["unidade"]: u for u in out["unidades"]}
+    linhas = out["unidades"]
     # unidade de AH nunca aparece (escopo R-001)
-    assert "UX" not in unidades
-    # UA: vencido(1000) + a_vencer(500) = pendente 1500
-    assert unidades["UA"]["vencido"] == "1000.00"
-    assert unidades["UA"]["a_vencer"] == "500.00"
-    assert unidades["UA"]["total_pendente"] == "1500.00"
-    assert unidades["UA"]["tudo_pago"] is False
-    # UB: só paga → tudo_pago, pendente 0
-    assert unidades["UB"]["tudo_pago"] is True
-    assert unidades["UB"]["total_pendente"] == "0.00"
-    # ordena por pendência desc: UA (1500) antes de UB (0)
-    assert [u["unidade"] for u in out["unidades"]] == ["UA", "UB"]
+    assert all(l["unidade"] != "UX" for l in linhas)
+
+    # UA gera dois lotes (um por data de vencimento).
+    lotes_ua = [l for l in linhas if l["unidade"] == "UA"]
+    assert len(lotes_ua) == 2
+    por_data = {l["data_vencimento"]: l for l in lotes_ua}
+    # Lote vencido (24/06): só vencido, dias > 0 (atraso).
+    venc = por_data[venc_atraso.isoformat()]
+    assert venc["vencido"] == "1000.00"
+    assert venc["a_vencer"] == "0.00"
+    assert venc["total_pendente"] == "1000.00"
+    assert venc["dias"] == 3
+    assert venc["tudo_pago"] is False
+    # Lote a vencer (futuro): só a_vencer, dias < 0.
+    fut = por_data[venc_futuro.isoformat()]
+    assert fut["a_vencer"] == "500.00"
+    assert fut["total_pendente"] == "500.00"
+    assert fut["dias"] == -3
+
+    # UB: só paga → linha única "Tudo pago" (sem data).
+    ub = next(l for l in linhas if l["unidade"] == "UB")
+    assert ub["tudo_pago"] is True
+    assert ub["data_vencimento"] is None
+    assert ub["total_pendente"] == "0.00"
+
+    # ordena unidades por pendência desc (UA 1500 antes de UB 0); lotes da UA por data asc.
+    assert [l["unidade"] for l in linhas] == ["UA", "UA", "UB"]
+    assert lotes_ua[0]["data_vencimento"] == venc_atraso.isoformat()
     # parceiro não recebe campos de gestor nas solicitações
-    assert "lucro_operacional" not in out["unidades"][0]["solicitacoes"][0]
+    assert "lucro_operacional" not in venc["solicitacoes"][0]
 
 
 def test_proximos_respeita_janela():

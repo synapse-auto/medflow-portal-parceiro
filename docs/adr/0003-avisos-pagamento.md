@@ -3,6 +3,17 @@
 **Status:** accepted (2026-06-29) — feature 004. Complementa Vencimentos (US1/RF-024) sem
 alterar a fonte financeira: status continua vindo do sheet, mudado à mão pelo gestor.
 
+> **Atualização (2026-06-30) — 004b: aviso por LOTE, não por Unidade.** A granularidade do
+> aviso passou de **Unidade** para **lote = (Unidade, data de vencimento)**: a mesma unidade
+> pode ter vários vencimentos em datas diferentes, cada um avisado/verificado/pago em separado
+> (ex.: 10 solic. p/ 24/06 + 25 p/ 06/07 na mesma unidade = dois avisos). O aviso ganhou a
+> coluna `data_vencimento`; o índice único do aviso ativo virou `(contratante, unidade,
+> data_vencimento)`; `POST /avisos` passa a receber `data_vencimento`. O prazo é evidenciado
+> na aba Vencimentos (selo vermelho se vencido), nos modais de pagamento e no quadro do gestor
+> (que ganhou um toggle "agrupar por unidade / por vencimento"). Migration:
+> `supabase/migrations/20260630_pagamentos_avisos_data_vencimento.sql`. Onde se lê "por
+> Unidade" abaixo, considere "por lote".
+
 ## Contexto
 
 Contratantes pagam **por Unidade** (não o valor cheio de uma vez). Faltava um canal para o
@@ -36,9 +47,10 @@ Supabase Auth `app_metadata` — inadequada para um quadro de avisos consultáve
    - **Verificar/rejeitar não tocam o sheet nem o CRM** — só este quadro. O gestor atualiza o
      status financeiro manualmente na planilha depois.
 
-5. **1 aviso ativo por unidade:** índice único parcial sobre `(contratante, unidade)` onde
-   `status in ('pendente','verificado')`. Trava reenvio; `cancelado`/`rejeitado` são terminais e
-   liberam um novo aviso da mesma unidade.
+5. **1 aviso ativo por lote:** índice único parcial sobre `(contratante, unidade,
+   data_vencimento)` onde `status in ('pendente','verificado')`. Trava reenvio do mesmo lote;
+   `cancelado`/`rejeitado` são terminais e liberam um novo aviso do mesmo lote. (Era
+   `(contratante, unidade)` — ver Atualização 004b.)
 
 6. **Visão do gestor** (`GET /api/pagamentos`): seções grandes por contratante, com 3 blocos —
    **Em Análise** (pendentes; rótulo de UI — antes "Aguardando verificação"), **Verificadas** e
