@@ -64,7 +64,7 @@ export default function PendenciasPage() {
           {p.motivos.map((m, i) => (
             <span
               key={i}
-              className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning"
+              className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground"
             >
               {m}
             </span>

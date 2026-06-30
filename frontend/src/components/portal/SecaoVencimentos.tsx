@@ -124,7 +124,7 @@ function BadgeAtraso({ dias, tone }: { dias: number; tone: Tone }) {
   }
   const cls =
     tone === "success"
-      ? "bg-success/12 text-success"
+      ? "bg-success/12 text-success-ink"
       : dias < 0
         ? "bg-primary/10 text-primary"
         : "bg-muted text-muted-foreground";

@@ -83,7 +83,7 @@ export function Sidebar({
                 <span className="font-display text-xl font-bold tracking-tight text-white">
                   med<span className="font-extrabold italic">flow</span>
                 </span>
-                <span className="mt-1 text-[10px] font-medium tracking-[0.18em] text-sidebar-foreground/45">
+                <span className="mt-1 text-[10px] font-medium tracking-[0.18em] text-sidebar-foreground/75">
                   PORTAL DE PARCEIROS
                 </span>
               </motion.span>
@@ -120,7 +120,7 @@ export function Sidebar({
               <Icon
                 className={cn(
                   "size-[19px] shrink-0 transition-colors",
-                  ativo ? "text-sidebar-primary" : "text-sidebar-foreground/55 group-hover:text-sidebar-foreground",
+                  ativo ? "text-sidebar-primary" : "text-sidebar-foreground/75 group-hover:text-sidebar-foreground",
                 )}
               />
               <AnimatePresence initial={false}>
@@ -154,7 +154,7 @@ export function Sidebar({
       <div className="relative mt-auto flex flex-col gap-1 border-t border-sidebar-border/50 p-3">
         <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between px-1")}>
           {!collapsed && (
-            <span className="text-[11px] font-medium tracking-wide text-sidebar-foreground/40">
+            <span className="text-[11px] font-medium tracking-wide text-sidebar-foreground/75">
               {PAPEL_LABEL[papel] ?? papel}
             </span>
           )}

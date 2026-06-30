@@ -117,7 +117,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                     )}
                   >
                     <Icon
-                      className={cn("size-[19px]", ativo ? "text-sidebar-primary" : "text-sidebar-foreground/55")}
+                      className={cn("size-[19px]", ativo ? "text-sidebar-primary" : "text-sidebar-foreground/75")}
                     />
                     {item.label}
                   </Link>

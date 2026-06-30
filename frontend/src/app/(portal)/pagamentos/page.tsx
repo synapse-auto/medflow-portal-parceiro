@@ -120,16 +120,18 @@ function SecaoContratante({ c, onMutate }: { c: ContratantePagamentos; onMutate:
           className="size-4 shrink-0 rounded-full ring-1 ring-border"
           style={{ background: c.cor ?? "#94a3b8" }}
         />
-        <CardTitle className="font-display text-lg font-bold">{c.contratante || "—"}</CardTitle>
+        <CardTitle role="heading" aria-level={2} className="font-display text-lg font-bold">
+          {c.contratante || "—"}
+        </CardTitle>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {aguardando.length > 0 ? (
-            <Badge className="bg-warning/15 text-warning">
+            <Badge className="bg-warning/15 text-warning-foreground">
               <Clock className="size-3" />
               {aguardando.length} aguardando
             </Badge>
           ) : null}
           {verificadas.length > 0 ? (
-            <Badge className="bg-success/15 text-success">
+            <Badge className="bg-success/15 text-success-ink">
               <CircleCheckBig className="size-3" />
               {verificadas.length} verificada{verificadas.length === 1 ? "" : "s"}
             </Badge>
@@ -179,8 +181,8 @@ function SecaoContratante({ c, onMutate }: { c: ContratantePagamentos; onMutate:
 }
 
 const TOM_TITULO: Record<string, string> = {
-  warning: "text-warning",
-  success: "text-success",
+  warning: "text-warning-foreground",
+  success: "text-success-ink",
   neutro: "text-muted-foreground",
 };
 
@@ -246,7 +248,7 @@ function AvisoCard({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: () =>
 
       {verificado ? (
         <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-success">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-success-ink">
             <CircleCheckBig className="size-4" />
             Verificado
           </span>

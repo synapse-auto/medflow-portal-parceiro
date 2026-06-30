@@ -313,7 +313,7 @@ function ContratanteLinha({
           {c.tudo_pago ? (
             <>
               <div className="flex-1" />
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/12 px-2.5 py-1 text-xs font-semibold text-success">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/12 px-2.5 py-1 text-xs font-semibold text-success-ink">
                 <CircleCheckBig className="size-3.5" />
                 Tudo pago
               </span>
@@ -371,7 +371,7 @@ function UnidadeLinhaParceiro({
             {u.tudo_pago ? (
               <>
                 <div className="flex-1" />
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-success/12 px-2.5 py-1 text-xs font-semibold text-success">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success/12 px-2.5 py-1 text-xs font-semibold text-success-ink">
                   <CircleCheckBig className="size-3.5" />
                   Tudo pago
                 </span>
@@ -501,7 +501,9 @@ function Secao({
     <Card className="p-5">
       <CardHeader className="flex-row items-start justify-between gap-3 px-0">
         <div>
-          <CardTitle className="font-display text-base font-bold">{titulo}</CardTitle>
+          <CardTitle role="heading" aria-level={2} className="font-display text-base font-bold">
+            {titulo}
+          </CardTitle>
           {descricao ? <CardDescription>{descricao}</CardDescription> : null}
         </div>
         {acao}

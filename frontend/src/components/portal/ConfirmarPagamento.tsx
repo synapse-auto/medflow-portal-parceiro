@@ -39,7 +39,7 @@ export function PagarUnidade({
 
   if (status === "verificado") {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success/12 px-2.5 py-1 text-xs font-semibold text-success">
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success/12 px-2.5 py-1 text-xs font-semibold text-success-ink">
         <CircleCheckBig className="size-3.5" />
         Pagamento verificado
       </span>
@@ -87,7 +87,7 @@ function BotaoPagar({
       <div className="flex shrink-0 items-center gap-2">
         {avisoRejeitado ? (
           <span
-            className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
+            className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-danger-ink"
             title={avisoRejeitado.motivo_rejeicao ?? undefined}
           >
             <TriangleAlert className="size-3" />
@@ -169,7 +169,7 @@ function AvisoEnviado({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: ()
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning transition-colors hover:bg-warning/20 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning-foreground transition-colors hover:bg-warning/20 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <Clock className="size-3.5" />
         Aviso enviado

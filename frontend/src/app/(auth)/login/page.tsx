@@ -118,7 +118,7 @@ export default function LoginPage() {
             <div
               role="status"
               aria-live="polite"
-              className="mt-6 rounded-lg bg-warning/10 px-3.5 py-2.5 text-sm font-medium text-warning ring-1 ring-warning/20"
+              className="mt-6 rounded-lg bg-warning/10 px-3.5 py-2.5 text-sm font-medium text-warning-foreground ring-1 ring-warning/20"
             >
               {aviso}
             </div>

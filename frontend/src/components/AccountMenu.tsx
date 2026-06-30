@@ -60,9 +60,9 @@ export function AccountMenu({
           <>
             <span className="grid flex-1 leading-tight">
               <span className="truncate text-sm font-medium">{nome}</span>
-              <span className="truncate text-xs text-sidebar-foreground/55">{papel}</span>
+              <span className="truncate text-xs text-sidebar-foreground/75">{papel}</span>
             </span>
-            <ChevronsUpDown className="size-4 shrink-0 text-sidebar-foreground/45" />
+            <ChevronsUpDown className="size-4 shrink-0 text-sidebar-foreground/70" />
           </>
         )}
       </DropdownMenuTrigger>

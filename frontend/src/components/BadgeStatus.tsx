@@ -3,9 +3,9 @@ import type { StatusKey } from "@/lib/types";
 
 // Status nunca depende só de cor (a11y): pílula com ponto + rótulo textual.
 const ESTILO: Record<StatusKey, string> = {
-  pago: "bg-success/12 text-success",
-  a_pagar: "bg-warning/15 text-warning",
-  atrasado: "bg-destructive/10 text-destructive",
+  pago: "bg-success/12 text-success-ink",
+  a_pagar: "bg-warning/15 text-warning-foreground",
+  atrasado: "bg-destructive/10 text-danger-ink",
 };
 
 export function BadgeStatus({
