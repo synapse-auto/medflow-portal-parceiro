@@ -30,10 +30,12 @@ import type { PagamentoAviso, UnidadeVencimentosParceiro } from "@/lib/types";
 export function PagarUnidade({
   unidade,
   aviso,
+  rebateAtivo = false,
   onMutate,
 }: {
   unidade: UnidadeVencimentosParceiro;
   aviso?: PagamentoAviso;
+  rebateAtivo?: boolean;
   onMutate: () => void;
 }) {
   const status = aviso?.status;
@@ -53,18 +55,29 @@ export function PagarUnidade({
 
   // Sem aviso ativo. Nada pendente → nada a fazer.
   if (unidade.tudo_pago) return null;
-  return <BotaoPagar unidade={unidade} avisoRejeitado={status === "rejeitado" ? aviso : undefined} onMutate={onMutate} />;
+  return (
+    <BotaoPagar
+      unidade={unidade}
+      rebateAtivo={rebateAtivo}
+      avisoRejeitado={status === "rejeitado" ? aviso : undefined}
+      onMutate={onMutate}
+    />
+  );
 }
 
 function BotaoPagar({
   unidade,
+  rebateAtivo,
   avisoRejeitado,
   onMutate,
 }: {
   unidade: UnidadeVencimentosParceiro;
+  rebateAtivo: boolean;
   avisoRejeitado?: PagamentoAviso;
   onMutate: () => void;
 }) {
+  // Serviço de rebate ativo + o lote tem cashback → mostra Originação − Rebate = Valor a Pagar.
+  const mostrarRebate = rebateAtivo && Number(unidade.rebate) > 0;
   const [aberto, setAberto] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const nPendentes = (unidade.solicitacoes ?? []).filter((s) => s.status !== "pago").length;
@@ -115,14 +128,42 @@ function BotaoPagar({
             </DialogDescription>
           </DialogHeader>
 
-          {/* Valor + prazo em ênfase */}
+          {/* Valor + prazo em ênfase. Com serviço de rebate: Originação − Rebate = Valor a Pagar. */}
           <div className="flex flex-col items-center gap-2 rounded-xl border bg-muted/30 p-5 text-center">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Valor deste vencimento
-            </p>
-            <p className="font-display text-4xl font-bold tabular-nums text-primary">
-              {formatMoeda(unidade.total_pendente)}
-            </p>
+            {mostrarRebate ? (
+              <>
+                <div className="flex w-full flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Originação</span>
+                    <span className="font-medium tabular-nums text-muted-foreground">
+                      {formatMoeda(unidade.total_pendente)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Rebate (cashback)</span>
+                    <span className="font-medium tabular-nums text-success">
+                      − {formatMoeda(unidade.rebate)}
+                    </span>
+                  </div>
+                </div>
+                <div className="my-1 h-px w-full bg-border" />
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Valor a Pagar
+                </p>
+                <p className="font-display text-4xl font-bold tabular-nums text-primary">
+                  {formatMoeda(unidade.valor_a_pagar)}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Valor deste vencimento
+                </p>
+                <p className="font-display text-4xl font-bold tabular-nums text-primary">
+                  {formatMoeda(unidade.total_pendente)}
+                </p>
+              </>
+            )}
             <BadgePrazo data={unidade.data_vencimento} />
           </div>
 
@@ -159,6 +200,8 @@ function BotaoPagar({
 function AvisoEnviado({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: () => void }) {
   const [aberto, setAberto] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  // O aviso congela o rebate no envio: rebate > 0 ⟺ a Contratante tinha o serviço (feature 005).
+  const mostrarRebate = Number(aviso.rebate) > 0;
 
   async function cancelar() {
     setCancelando(true);
@@ -201,8 +244,27 @@ function AvisoEnviado({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: ()
             <dd className="text-right font-medium tabular-nums">
               {formatData(aviso.data_vencimento)}
             </dd>
-            <dt className="text-muted-foreground">Valor</dt>
-            <dd className="text-right font-medium tabular-nums">{formatMoeda(aviso.valor)}</dd>
+            {mostrarRebate ? (
+              <>
+                <dt className="text-muted-foreground">Originação</dt>
+                <dd className="text-right font-medium tabular-nums text-muted-foreground">
+                  {formatMoeda(aviso.valor)}
+                </dd>
+                <dt className="text-muted-foreground">Rebate (cashback)</dt>
+                <dd className="text-right font-medium tabular-nums text-success">
+                  − {formatMoeda(aviso.rebate)}
+                </dd>
+                <dt className="font-semibold text-foreground">Valor a Pagar</dt>
+                <dd className="text-right font-bold tabular-nums text-primary">
+                  {formatMoeda(aviso.valor_a_pagar)}
+                </dd>
+              </>
+            ) : (
+              <>
+                <dt className="text-muted-foreground">Valor</dt>
+                <dd className="text-right font-medium tabular-nums">{formatMoeda(aviso.valor)}</dd>
+              </>
+            )}
             <dt className="text-muted-foreground">Enviado em</dt>
             <dd className="text-right font-medium">{formatData(aviso.created_at?.slice(0, 10))}</dd>
           </dl>

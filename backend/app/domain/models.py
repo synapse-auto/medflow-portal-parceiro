@@ -89,6 +89,10 @@ class AppUser(BaseModel):
     # da Contratante). `None` = nunca configurada → sem restrição de unidade (back-compat).
     # Lista (mesmo vazia) = allowlist explícita; `[]` = não vê nenhuma solicitação. Feature 003.
     unidades: list[str] | None = None
+    # Serviço de rebate (cashback) ativo p/ esta Contratante (feature 005): no pagamento, o
+    # parceiro paga Originação − Rebate (Σ cashback do lote). Config do gestor, sincronizada
+    # entre os logins (app_metadata). Ausente/False = paga a Originação cheia (comportamento atual).
+    rebate_ativo: bool = False
 
 
 class MetricasOverview(BaseModel):

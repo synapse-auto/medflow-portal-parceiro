@@ -131,7 +131,12 @@ function VencimentosView() {
       ) : gestor ? (
         <VistaGestor data={gestor} />
       ) : parceiro ? (
-        <VistaParceiro data={parceiro} periodo={periodo} onPeriodo={setPeriodo} />
+        <VistaParceiro
+          data={parceiro}
+          periodo={periodo}
+          onPeriodo={setPeriodo}
+          rebateAtivo={!!me?.rebate_ativo}
+        />
       ) : null}
     </div>
   );
@@ -141,10 +146,12 @@ function VistaParceiro({
   data,
   periodo,
   onPeriodo,
+  rebateAtivo,
 }: {
   data: VencimentosParceiro;
   periodo: Periodo;
   onPeriodo: (p: Periodo) => void;
+  rebateAtivo: boolean;
 }) {
   // Defesa: payload pode chegar parcial (campos ausentes) — normaliza arrays.
   const unidades = data.unidades ?? [];
@@ -200,6 +207,7 @@ function VistaParceiro({
                   u={u}
                   maxPendente={maxPendente}
                   aviso={avisos[chave]}
+                  rebateAtivo={rebateAtivo}
                   onMutate={recarregarAvisos}
                 />
               );
@@ -409,12 +417,14 @@ function UnidadeLinhaParceiro({
   u,
   maxPendente,
   aviso,
+  rebateAtivo,
   onMutate,
 }: {
   chave: string;
   u: UnidadeVencimentosParceiro;
   maxPendente: number;
   aviso?: PagamentoAviso;
+  rebateAtivo: boolean;
   onMutate: () => void;
 }) {
   return (
@@ -440,12 +450,11 @@ function UnidadeLinhaParceiro({
               <>
                 {/* Prazo do lote em destaque (vermelho se vencido). */}
                 <BadgePrazo data={u.data_vencimento} />
-                {/* Barra com largura máxima reduzida p/ dar espaço ao prazo. */}
+                {/* Barra ocupa o espaço restante; prazo já cabe ao lado. */}
                 <BarraSegmentada
                   vencido={Number(u.vencido) || 0}
                   aVencer={Number(u.a_vencer) || 0}
                   max={maxPendente}
-                  className="max-w-[12rem]"
                 />
                 <span className="w-28 shrink-0 text-right text-sm font-semibold tabular-nums">
                   {formatMoeda(u.total_pendente)}
@@ -454,7 +463,7 @@ function UnidadeLinhaParceiro({
             )}
           </div>
         </AccordionTrigger>
-        <PagarUnidade unidade={u} aviso={aviso} onMutate={onMutate} />
+        <PagarUnidade unidade={u} aviso={aviso} rebateAtivo={rebateAtivo} onMutate={onMutate} />
       </div>
       <AccordionContent className="bg-muted/20 px-3 pt-1 pb-3">
         <DataTable colunas={colsSolicUnidade} itens={u.solicitacoes ?? []} getKey={(s) => s.codigo} />

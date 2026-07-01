@@ -233,7 +233,7 @@ def parse_base(values: list[list[str]]) -> dict[str, dict[str, str | None]]:
     idx_nome = col("borrower_full_name")
     idx_cpf = col("borrower_taxpayer_id")
     idx_tel = col("borrower_phone") or col("borrower_phone_number")
-    idx_email = col("borrower_email")
+    idx_email = col("borrower_email") or col("borrower_email_address")
     idx_pix = col("borrower_pix_key")
     idx_pix_tipo = col("borrower_pix_key_type")
     idx_nasc = col("borrower_birth_date") or col("borrower_date_of_birth")

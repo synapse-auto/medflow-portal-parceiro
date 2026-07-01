@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -60,17 +61,21 @@ export function Sidebar({
       <div className={cn("relative flex h-[72px] items-center px-4", collapsed && "justify-center px-0")}>
         <Link
           href="/dashboard"
-          className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          className={cn(
+            "flex rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+            collapsed ? "items-center justify-center" : "flex-col items-start gap-1.5",
+          )}
         >
-          <span
-            className="grid size-9 shrink-0 place-items-center rounded-xl font-display text-lg font-extrabold text-white shadow-lg ring-1 ring-white/15"
-            style={{
-              background: "linear-gradient(135deg, oklch(0.58 0.2 292), oklch(0.45 0.16 288))",
-              boxShadow: "0 6px 20px oklch(0.5 0.2 292 / 0.45)",
-            }}
-          >
-            <span className="italic">m</span>
-          </span>
+          <div className={cn("relative shrink-0", collapsed ? "size-9" : "h-9 w-[160px]")}>
+            <Image
+              src="/logo-roxo.png"
+              alt="medflow"
+              fill
+              priority
+              sizes="160px"
+              className="object-contain object-left"
+            />
+          </div>
           <AnimatePresence initial={false}>
             {!collapsed && (
               <motion.span
@@ -78,14 +83,9 @@ export function Sidebar({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -6 }}
                 transition={{ duration: 0.2 }}
-                className="grid leading-none"
+                className="text-[10px] font-medium tracking-[0.18em] text-sidebar-foreground/75"
               >
-                <span className="font-display text-xl font-bold tracking-tight text-white">
-                  med<span className="font-extrabold italic">flow</span>
-                </span>
-                <span className="mt-1 text-[10px] font-medium tracking-[0.18em] text-sidebar-foreground/75">
-                  PORTAL DE PARCEIROS
-                </span>
+                PORTAL DE PARCEIROS
               </motion.span>
             )}
           </AnimatePresence>

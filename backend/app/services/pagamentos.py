@@ -50,29 +50,39 @@ def _pendente(s: Solicitacao) -> bool:
     return s.status in (STATUS_ATRASADO, STATUS_A_PAGAR)
 
 
-def snapshot_lote(sols_do_lote: list[Solicitacao]) -> tuple[Decimal, list[str]]:
-    """Congela o que o aviso cobre: total pendente + códigos das solicitações pendentes.
+def snapshot_lote(
+    sols_do_lote: list[Solicitacao], rebate_ativo: bool = False
+) -> tuple[Decimal, Decimal, list[str]]:
+    """Congela o que o aviso cobre: total pendente + rebate + códigos das solicitações pendentes.
 
     O lote = (unidade, data de vencimento). Pagas não entram (não é o que se paga agora);
-    `valor` = Σ das pendentes do lote. Levanta erro se não houver nada pendente (nada a avisar).
+    `valor` = Σ Originação das pendentes do lote. Quando a Contratante tem o serviço de rebate
+    (feature 005), `rebate` = Σ cashback das mesmas pendentes; senão 0 (paga a Originação cheia).
+    O Valor a Pagar (= valor − rebate) é derivado na serialização. Levanta erro se não houver
+    nada pendente (nada a avisar).
     """
     pendentes = [s for s in sols_do_lote if _pendente(s)]
     if not pendentes:
         raise PagamentoAvisoError("O lote não possui valores pendentes para avisar.")
     valor = sum((s.valor for s in pendentes), Decimal("0"))
+    rebate = sum((s.cashback for s in pendentes), Decimal("0")) if rebate_ativo else Decimal("0")
     codigos = [s.codigo for s in pendentes]
-    return valor, codigos
+    return valor, rebate, codigos
 
 
 def _serializa(row: dict) -> dict:
     """Linha da tabela → shape do contrato (dinheiro como string decimal)."""
     status = row["status"]
+    valor = Decimal(str(row["valor"]))
+    rebate = Decimal(str(row.get("rebate") or 0))  # 0 quando a Contratante não tem o serviço
     return {
         "id": str(row["id"]),
         "contratante": row["contratante"],
         "unidade": row["unidade"],
         "data_vencimento": row.get("data_vencimento"),
-        "valor": money_str(Decimal(str(row["valor"]))),
+        "valor": money_str(valor),  # Originação (bruto) congelada no envio
+        "rebate": money_str(rebate),  # Σ cashback do lote (feature 005)
+        "valor_a_pagar": money_str(valor - rebate),  # o que o parceiro paga / o gestor verifica
         "solicitacao_codigos": row.get("solicitacao_codigos") or [],
         "status": status,
         "status_label": AVISO_LABELS.get(status, status),
@@ -227,14 +237,17 @@ class PagamentosService:
         data_vencimento: date,
         valor: Decimal,
         codigos: list[str],
+        rebate: Decimal = Decimal("0"),
     ) -> dict:
         """Cria aviso (pendente). O índice único barra 2º aviso ativo do mesmo lote
-        (contratante, unidade, data de vencimento)."""
+        (contratante, unidade, data de vencimento). `rebate` (feature 005) fica congelado
+        junto do valor — 0 quando a Contratante não tem o serviço."""
         payload = {
             "contratante": contratante,
             "unidade": unidade,
             "data_vencimento": data_vencimento.isoformat(),
             "valor": str(valor),
+            "rebate": str(rebate),
             "solicitacao_codigos": codigos,
             "status": AVISO_PENDENTE,
         }

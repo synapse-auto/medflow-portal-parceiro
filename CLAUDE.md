@@ -44,3 +44,15 @@ Estados: pendente→(cancelado|verificado|rejeitado); verificado→pendente.
 - ADR: `docs/adr/0003-avisos-pagamento.md` · Migrations: `supabase/migrations/20260629_pagamentos_avisos.sql` + `20260630_pagamentos_avisos_data_vencimento.sql`
 - Backend: `app/services/pagamentos.py`, `app/routers/pagamentos.py` (`/api/pagamentos/*`)
 - Frontend: `app/(portal)/pagamentos/page.tsx`, `components/portal/ConfirmarPagamento.tsx`
+
+## Feature: Rebate/cashback no pagamento (005)
+Config por **Contratante** (não por login): toggle `rebate_ativo` no `app_metadata` (fan-out via
+`editar_config`, editado no dialog "Editar parceiro"). Só p/ Contratantes com o serviço, o
+pagamento vira **Valor a Pagar = Originação − Rebate**, onde Rebate = Σ `cashback` (coluna do
+sheet, já existente) das solicitações pendentes do lote. Abate **só** no modal de pagamento
+(parceiro) e no card de verificação (gestor) — Dashboard/Vencimentos seguem em Originação cheia.
+O `rebate` é congelado no snapshot do aviso (0 p/ quem não tem o serviço; retrocompatível).
+- Migration: `supabase/migrations/20260701_pagamentos_avisos_rebate.sql` (coluna `rebate`)
+- Backend: `rebate_ativo` em `AppUser`/`auth/supabase.py` + `partners.py`; `snapshot_lote`/`_serializa`
+  em `pagamentos.py`; `rebate`/`valor_a_pagar` por lote em `vencimentos.py`
+- Frontend: `Me.rebate_ativo` gate; `ConfirmarPagamento.tsx`, `pagamentos/page.tsx`, `parceiros/page.tsx` (Switch)

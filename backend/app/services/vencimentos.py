@@ -63,21 +63,25 @@ def vencimentos_parceiro(
             "n_atrasadas": len(atrasados),
             "n_a_pagar": len(a_pagar),
         },
-        "unidades": _unidades_parceiro(escopadas, hoje),
+        "unidades": _unidades_parceiro(escopadas, hoje, bool(getattr(user, "rebate_ativo", False))),
         "atrasados": [serializa_solicitacao(s) for s in atrasados],
         "proximos": [serializa_solicitacao(s) for s in proximos_lista],
         "pagos": [serializa_solicitacao(s) for s in pagos],
     }
 
 
-def _unidades_parceiro(sols: list[Solicitacao], hoje: date) -> list[dict]:
+def _unidades_parceiro(
+    sols: list[Solicitacao], hoje: date, rebate_ativo: bool = False
+) -> list[dict]:
     """Linhas de vencimento do parceiro: um LOTE por (unidade, data de vencimento) pendente.
 
     Pagamento é por lote (unidade + prazo): a mesma unidade pode ter vários vencimentos em
     datas diferentes, cada um avisado/pago em separado (ex.: 10 solic. p/ 24/06 + 25 p/ 06/07
     na mesma unidade = duas linhas). Cada lote traz vencido/a_vencer (barra), total_pendente,
-    `data_vencimento` e `dias` (>0 = vencido → vermelho no front). Unidade sem pendência vira
-    uma única linha "Tudo pago" (data nula). Sem campos de gestor — escopo R-001.
+    `data_vencimento` e `dias` (>0 = vencido → vermelho no front). Quando a Contratante tem o
+    serviço de rebate (feature 005), o lote também traz `rebate` (Σ cashback) e `valor_a_pagar`
+    (= total_pendente − rebate) — o modal de pagamento os usa (bate 1:1 com o snapshot do envio).
+    Unidade sem pendência vira uma linha "Tudo pago" (data nula). Sem campos de gestor (R-001).
 
     Ordena unidades por pendência desc, depois nome; dentro da unidade, lotes por data asc;
     unidades "Tudo pago" caem no fim.
@@ -105,7 +109,7 @@ def _unidades_parceiro(sols: list[Solicitacao], hoje: date) -> list[dict]:
         for s in pendentes:
             por_data[s.data_vencimento].append(s)
         for venc in sorted(por_data):
-            linhas.append(_linha_lote(unidade, venc, por_data[venc], hoje))
+            linhas.append(_linha_lote(unidade, venc, por_data[venc], hoje, rebate_ativo))
     return linhas
 
 
@@ -117,14 +121,21 @@ def _linha_paga(unidade: str, lista: list[Solicitacao]) -> dict:
         "vencido": "0.00",
         "a_vencer": "0.00",
         "total_pendente": "0.00",
+        "rebate": "0.00",
+        "valor_a_pagar": "0.00",
         "tudo_pago": True,
         "solicitacoes": [serializa_solicitacao(s) for s in lista],
     }
 
 
-def _linha_lote(unidade: str, venc: date, lote: list[Solicitacao], hoje: date) -> dict:
+def _linha_lote(
+    unidade: str, venc: date, lote: list[Solicitacao], hoje: date, rebate_ativo: bool = False
+) -> dict:
     vencido = sum((s.valor for s in lote if s.status == STATUS_ATRASADO), Decimal("0"))
     a_vencer = sum((s.valor for s in lote if s.status == STATUS_A_PAGAR), Decimal("0"))
+    total = vencido + a_vencer
+    # Rebate só quando a Contratante tem o serviço (feature 005); mesma soma do snapshot do envio.
+    rebate = sum((s.cashback for s in lote), Decimal("0")) if rebate_ativo else Decimal("0")
     lote.sort(key=lambda s: s.codigo)
     return {
         "unidade": unidade,
@@ -132,7 +143,9 @@ def _linha_lote(unidade: str, venc: date, lote: list[Solicitacao], hoje: date) -
         "dias": (hoje - venc).days,  # >0 vencido; <=0 a vencer (0 = hoje)
         "vencido": money_str(vencido),
         "a_vencer": money_str(a_vencer),
-        "total_pendente": money_str(vencido + a_vencer),
+        "total_pendente": money_str(total),
+        "rebate": money_str(rebate),
+        "valor_a_pagar": money_str(total - rebate),
         "tudo_pago": False,
         "solicitacoes": [serializa_solicitacao(s) for s in lote],
     }

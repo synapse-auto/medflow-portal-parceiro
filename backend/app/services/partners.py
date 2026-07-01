@@ -64,6 +64,11 @@ def _unidades(user: object) -> list[str] | None:
     return [str(u) for u in raw]
 
 
+def _rebate_ativo(user: object) -> bool:
+    """Serviço de rebate (cashback) ativo p/ o login (feature 005). Ausente = False."""
+    return bool(_app_meta(user).get("rebate_ativo", False))
+
+
 def _serializa(user: object) -> dict:
     created = getattr(user, "created_at", None)
     return {
@@ -73,6 +78,7 @@ def _serializa(user: object) -> dict:
         "contratante": _app_meta(user).get("contratante"),
         "cor": _cor(user),
         "unidades": _unidades(user),
+        "rebate_ativo": _rebate_ativo(user),
         "created_at": created.isoformat() if hasattr(created, "isoformat") else created,
     }
 
@@ -107,6 +113,7 @@ class PartnersService:
                     "contratante": contratante,
                     "cor": self._cor_canonica(logins, contratante),
                     "unidades": self._unidades_canonica(logins),
+                    "rebate_ativo": self._rebate_ativo_canonica(logins),
                     "logins": [_serializa(u) for u in logins],
                 }
             )
@@ -160,15 +167,19 @@ class PartnersService:
         if existentes:
             cor_final = self._cor_canonica(existentes, contratante)
             unidades_final = self._unidades_canonica(existentes)
+            rebate_final = self._rebate_ativo_canonica(existentes)
         else:
             cor_final = cor or cor_para(contratante)
             unidades_final = unidades_default
+            rebate_final = False
 
         app_metadata: dict = {"role": ROLE_PARCEIRO, "contratante": contratante}
         if cor_final:
             app_metadata["cor"] = cor_final
         if unidades_final is not None:
             app_metadata["unidades"] = unidades_final
+        if rebate_final:
+            app_metadata["rebate_ativo"] = True
         try:
             created = self._admin.auth.admin.create_user(
                 {
@@ -209,25 +220,31 @@ class PartnersService:
         contratante: str,
         cor: str | None = None,
         unidades: list[str] | None = None,
+        rebate_ativo: bool | None = None,
     ) -> dict:
-        """Edita a config da Contratante (cor e/ou allowlist de unidades) com **fan-out**:
-        grava em TODOS os logins dela (mantém o vínculo sincronizado). RF-027a + feature 003."""
+        """Edita a config da Contratante (cor, allowlist de unidades e/ou serviço de rebate)
+        com **fan-out**: grava em TODOS os logins dela (mantém o vínculo sincronizado).
+        RF-027a + feature 003; `rebate_ativo` na feature 005."""
         logins = self._logins_da_contratante(contratante)
         if not logins:
             raise PartnersError("Parceiro sem logins para configurar.")
-        if cor is None and unidades is None:
+        if cor is None and unidades is None and rebate_ativo is None:
             raise PartnersError("Nada para atualizar.")
         for login in logins:
             meta: dict = {"role": ROLE_PARCEIRO, "contratante": contratante}
             # Merge raso do GoTrue: reenvia a config existente + as mudanças desta chamada.
             cor_atual = _app_meta(login).get("cor")
             unidades_atual = _unidades(login)
+            rebate_atual = _rebate_ativo(login)
             cor_final = cor if cor is not None else cor_atual
             unidades_final = unidades if unidades is not None else unidades_atual
+            rebate_final = rebate_ativo if rebate_ativo is not None else rebate_atual
             if cor_final:
                 meta["cor"] = cor_final
             if unidades_final is not None:
                 meta["unidades"] = unidades_final
+            if rebate_final:
+                meta["rebate_ativo"] = True
             try:
                 self._admin.auth.admin.update_user_by_id(
                     str(getattr(login, "id", "")), {"app_metadata": meta}
@@ -238,6 +255,9 @@ class PartnersService:
             "contratante": contratante,
             "cor": cor if cor is not None else self._cor_canonica(logins, contratante),
             "unidades": unidades if unidades is not None else self._unidades_canonica(logins),
+            "rebate_ativo": (
+                rebate_ativo if rebate_ativo is not None else self._rebate_ativo_canonica(logins)
+            ),
         }
 
     def remover(self, user_id: str) -> None:
@@ -273,6 +293,11 @@ class PartnersService:
             if unidades is not None:
                 return unidades
         return None
+
+    @staticmethod
+    def _rebate_ativo_canonica(logins: list[object]) -> bool:
+        """Serviço de rebate da Contratante: ativo se qualquer login o tem (config sincronizada)."""
+        return any(_rebate_ativo(u) for u in logins)
 
     def _listar_todos(self) -> list:
         """Pagina por todos os usuários do Auth (Admin API)."""

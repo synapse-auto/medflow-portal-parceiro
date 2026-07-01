@@ -42,6 +42,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { apiGet, apiSend } from "@/lib/api";
 import { formatData } from "@/lib/format";
 import type { ContratanteOpcao, Parceiro, ParceiroLogin, UnidadeInfo } from "@/lib/types";
@@ -380,12 +381,14 @@ function DialogConfig({
 }) {
   const [cor, setCor] = useState(COR_PADRAO);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [rebateAtivo, setRebateAtivo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     if (!parceiro) return;
     setCor(parceiro.cor ?? COR_PADRAO);
+    setRebateAtivo(parceiro.rebate_ativo);
     setErro(null);
     if (parceiro.unidades !== null) {
       setSelecionadas(new Set(parceiro.unidades));
@@ -416,6 +419,7 @@ function DialogConfig({
         contratante: parceiro.contratante,
         cor,
         unidades: [...selecionadas],
+        rebate_ativo: rebateAtivo,
       });
       toast.success("Parceiro atualizado.");
       onFechar();
@@ -458,6 +462,27 @@ function DialogConfig({
             ) : null}
           </div>
         </div>
+
+        {/* Serviço de rebate (cashback) — feature 005: no pagamento o parceiro paga
+            Originação − Rebate; o gestor verifica o Valor a Pagar. */}
+        <label
+          htmlFor="cfg-rebate"
+          className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Serviço de rebate (cashback)</p>
+            <p className="text-xs text-muted-foreground">
+              No pagamento, o parceiro paga a Originação <strong>menos</strong> o rebate (cashback).
+              O gestor verifica o Valor a Pagar já descontado.
+            </p>
+          </div>
+          <Switch
+            id="cfg-rebate"
+            checked={rebateAtivo}
+            onCheckedChange={setRebateAtivo}
+            aria-label="Ativar serviço de rebate (cashback)"
+          />
+        </label>
 
         {erro ? <ErroBox msg={erro} /> : null}
 

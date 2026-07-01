@@ -9,6 +9,7 @@ export interface Me {
   nome_exibicao: string;
   role: Role;
   contratante: string | null;
+  rebate_ativo: boolean; // serviço de rebate ativo p/ a Contratante (feature 005)
 }
 
 export interface Solicitacao {
@@ -80,7 +81,9 @@ export interface UnidadeVencimentosParceiro {
   dias: number | null; // >0 vencido; <=0 a vencer (0 = hoje); null se tudo pago
   vencido: string; // Σ status atrasado do lote
   a_vencer: string; // Σ status a_pagar do lote
-  total_pendente: string; // vencido + a_vencer (chave de ordenação)
+  total_pendente: string; // vencido + a_vencer (chave de ordenação) = Σ Originação pendente
+  rebate: string; // Σ cashback do lote (feature 005; "0.00" se a Contratante não tem o serviço)
+  valor_a_pagar: string; // total_pendente − rebate (o que o parceiro paga)
   tudo_pago: boolean; // total_pendente == 0
   solicitacoes: Solicitacao[];
 }
@@ -156,6 +159,7 @@ export interface Parceiro {
   contratante: string;
   cor: string | null;
   unidades: string[] | null; // allowlist sincronizada (null = todas / legado)
+  rebate_ativo: boolean; // serviço de rebate (cashback) ativo (feature 005)
   logins: ParceiroLogin[];
 }
 
@@ -183,7 +187,9 @@ export interface PagamentoAviso {
   contratante: string;
   unidade: string;
   data_vencimento: string | null; // ISO; lote (unidade + vencimento) coberto pelo aviso
-  valor: string; // snapshot do total pendente no envio
+  valor: string; // snapshot da Originação (bruto) pendente no envio
+  rebate: string; // snapshot do rebate (Σ cashback); "0.00" sem o serviço (feature 005)
+  valor_a_pagar: string; // valor − rebate (o que o parceiro paga / o gestor verifica)
   solicitacao_codigos: string[];
   status: AvisoStatus;
   status_label: string;

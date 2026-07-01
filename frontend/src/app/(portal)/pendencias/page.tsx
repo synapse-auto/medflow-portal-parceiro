@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search, TriangleAlert } from "lucide-react";
+import { Search, TriangleAlert, UserRound } from "lucide-react";
 
 import { DataTable, type Coluna } from "@/components/DataTable";
 import { ErroCarregamento } from "@/components/portal/ErroCarregamento";
@@ -15,13 +15,19 @@ import type { Paginada, Pendencia } from "@/lib/types";
 
 const PAGINA = 50;
 
+const CONTRATANTE_INDIVIDUAL = "INDIVIDUAL";
+
+// Médicos "sem franquia" chegam com Contratante = "INDIVIDUAL": vão para a mesma aba de
+// pendências, mas numa seção inferior separada (não são erro de dado a corrigir na fonte).
+const ehIndividual = (p: Pendencia) =>
+  (p.contratante ?? "").trim().toUpperCase() === CONTRATANTE_INDIVIDUAL;
+
 // "Pendências de Dados" (gestor-only): solicitações reprovadas na validação, com motivo(s)
 // e linha de origem. Some de toda outra tela/métrica; volta sozinha ao corrigir a planilha.
 export default function PendenciasPage() {
   const [q, setQ] = useState("");
   const qBusca = useDebounce(q.trim());
   const [itens, setItens] = useState<Pendencia[]>([]);
-  const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [tentativa, setTentativa] = useState(0);
@@ -35,7 +41,6 @@ export default function PendenciasPage() {
     apiGet<Paginada<Pendencia>>(`/api/admin/pendencias?${params}`)
       .then((d) => {
         setItens(d.items);
-        setTotal(d.total);
         setMostrar(PAGINA);
       })
       .catch((e) => setErro(e instanceof Error ? e.message : "Erro ao carregar pendências."))
@@ -45,6 +50,10 @@ export default function PendenciasPage() {
   useEffect(() => {
     carregar();
   }, [carregar, tentativa]);
+
+  // Separa os "INDIVIDUAL" numa seção própria (renderizada abaixo das pendências normais).
+  const individuais = itens.filter(ehIndividual);
+  const normais = itens.filter((p) => !ehIndividual(p));
 
   const colunas: Coluna<Pendencia>[] = [
     { id: "linha", header: "Linha", align: "right", cell: (p) => String(p.linha_origem) },
@@ -83,8 +92,8 @@ export default function PendenciasPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Pendências de Dados</h1>
           <p className="mt-0.5 max-w-2xl text-muted-foreground">
-            {total} solicitaç{total === 1 ? "ão" : "ões"} com dado faltando ou inválido na planilha.
-            Corrija na fonte e elas voltam às telas normais automaticamente.
+            {normais.length} solicitaç{normais.length === 1 ? "ão" : "ões"} com dado faltando ou
+            inválido na planilha. Corrija na fonte e elas voltam às telas normais automaticamente.
           </p>
         </div>
       </div>
@@ -108,22 +117,45 @@ export default function PendenciasPage() {
         <>
           <DataTable
             colunas={colunas}
-            itens={itens.slice(0, mostrar)}
+            itens={normais.slice(0, mostrar)}
             getKey={(p) => `${p.linha_origem}-${p.codigo}`}
             vazio={{
               titulo: "Nenhuma pendência",
               descricao: "Todos os dados da planilha estão consistentes.",
             }}
           />
-          {itens.length > mostrar ? (
+          {normais.length > mostrar ? (
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground tabular-nums">
-                {Math.min(mostrar, itens.length)} de {itens.length}
+                {Math.min(mostrar, normais.length)} de {normais.length}
               </span>
               <Button variant="outline" onClick={() => setMostrar((m) => m + PAGINA)}>
                 Ver mais
               </Button>
             </div>
+          ) : null}
+
+          {individuais.length > 0 ? (
+            <section className="mt-2 flex flex-col gap-4 border-t border-border/60 pt-6">
+              <div className="flex items-start gap-3">
+                <span className="grid size-11 place-items-center rounded-xl bg-muted text-muted-foreground ring-1 ring-border">
+                  <UserRound className="size-5" />
+                </span>
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight">Contratantes como Individual</h2>
+                  <p className="mt-0.5 max-w-2xl text-muted-foreground">
+                    {individuais.length} solicitaç{individuais.length === 1 ? "ão" : "ões"} de
+                    médico sem franquia (Contratante “INDIVIDUAL”). Não aparecem para os parceiros.
+                  </p>
+                </div>
+              </div>
+              <DataTable
+                colunas={colunas}
+                itens={individuais}
+                getKey={(p) => `${p.linha_origem}-${p.codigo}`}
+                vazio={{ titulo: "Nenhum individual", descricao: "" }}
+              />
+            </section>
           ) : null}
         </>
       )}

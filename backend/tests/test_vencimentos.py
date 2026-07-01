@@ -9,7 +9,7 @@ from app.services.vencimentos import vencimentos_gestor, vencimentos_parceiro
 HOJE = date(2026, 6, 25)
 
 
-def _sol(contratante, codigo, status, valor, venc, unidade="U1"):
+def _sol(contratante, codigo, status, valor, venc, unidade="U1", cashback="0"):
     return Solicitacao(
         codigo=codigo,
         quitado=(status == "pago"),
@@ -21,6 +21,7 @@ def _sol(contratante, codigo, status, valor, venc, unidade="U1"):
         unidade=unidade,
         status=status,
         status_label=status,
+        cashback=Decimal(cashback),
     )
 
 
@@ -35,8 +36,15 @@ DATASET = [
 ]
 
 
-def _user(role, contratante):
-    return AppUser(id="u", email="e@e", role=role, contratante=contratante, nome_exibicao="N")
+def _user(role, contratante, rebate_ativo=False):
+    return AppUser(
+        id="u",
+        email="e@e",
+        role=role,
+        contratante=contratante,
+        nome_exibicao="N",
+        rebate_ativo=rebate_ativo,
+    )
 
 
 def test_cards_parceiro_agrega_so_o_proprio():
@@ -97,6 +105,30 @@ def test_parceiro_lotes_por_unidade_e_data_e_escopo():
     assert lotes_ua[0]["data_vencimento"] == venc_atraso.isoformat()
     # parceiro não recebe campos de gestor nas solicitações
     assert "lucro_operacional" not in venc["solicitacoes"][0]
+
+
+def test_parceiro_rebate_ativo_expoe_valor_a_pagar():
+    """Feature 005: Contratante com serviço → lote traz rebate (Σ cashback) e valor_a_pagar."""
+    venc = HOJE - timedelta(days=3)
+    dataset = [
+        _sol(BESA, "1", "atrasado", "1000", venc, unidade="UA", cashback="150"),
+        _sol(BESA, "2", "atrasado", "500", venc, unidade="UA", cashback="50"),
+    ]
+    out = vencimentos_parceiro(dataset, _user("parceiro", BESA, rebate_ativo=True), hoje=HOJE)
+    lote = next(l for l in out["unidades"] if l["unidade"] == "UA")
+    assert lote["total_pendente"] == "1500.00"  # Originação cheia
+    assert lote["rebate"] == "200.00"  # 150 + 50
+    assert lote["valor_a_pagar"] == "1300.00"  # 1500 − 200
+
+
+def test_parceiro_sem_servico_paga_originacao_cheia():
+    """Sem o serviço, o cashback não abate: rebate 0 e valor_a_pagar == Originação."""
+    venc = HOJE - timedelta(days=3)
+    dataset = [_sol(BESA, "1", "atrasado", "1000", venc, unidade="UA", cashback="150")]
+    out = vencimentos_parceiro(dataset, _user("parceiro", BESA, rebate_ativo=False), hoje=HOJE)
+    lote = next(l for l in out["unidades"] if l["unidade"] == "UA")
+    assert lote["rebate"] == "0.00"
+    assert lote["valor_a_pagar"] == "1000.00"
 
 
 def test_proximos_respeita_janela():

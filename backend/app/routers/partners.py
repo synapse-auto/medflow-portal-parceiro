@@ -39,6 +39,7 @@ class EditarConfigIn(BaseModel):
     contratante: str
     cor: str | None = Field(default=None, pattern=COR_HEX)
     unidades: list[str] | None = None
+    rebate_ativo: bool | None = None
 
 
 def _service() -> PartnersService:
@@ -64,6 +65,7 @@ def listar_partners(_: GestorUser) -> list[dict]:
                 "contratante": contratante,
                 "cor": cor_para(contratante),
                 "unidades": None,
+                "rebate_ativo": False,
                 "logins": [],
             }
     return sorted(com_login.values(), key=lambda p: p["contratante"].lower())
@@ -154,12 +156,14 @@ def editar_login(user_id: str, body: EditarLoginIn, _: GestorUser) -> dict:
 
 @router.put("/partners")
 def editar_config(body: EditarConfigIn, _: GestorUser) -> dict:
-    """Edita a config do Parceiro (cor + allowlist de unidades) — fan-out para todos os logins."""
+    """Edita a config do Parceiro (cor + allowlist de unidades + serviço de rebate) — fan-out
+    para todos os logins."""
     try:
         return _service().editar_config(
             contratante=body.contratante,
             cor=body.cor,
             unidades=body.unidades,
+            rebate_ativo=body.rebate_ativo,
         )
     except PartnersError as exc:
         raise _bad_request(exc) from exc

@@ -137,6 +137,43 @@ def test_editar_config_unidades_vazia_persiste_lista_vazia():
     assert users[0].app_metadata["unidades"] == []
 
 
+def test_editar_config_fanout_rebate_ativo():
+    """Feature 005: liga/desliga o serviço de rebate com fan-out para todos os logins."""
+    users = [
+        FakeUser("u1", "a@besa.com", _meta(contratante="BESA")),
+        FakeUser("u2", "b@besa.com", _meta(contratante="BESA")),
+    ]
+    svc = _svc(users)
+    out = svc.editar_config(contratante="BESA", rebate_ativo=True)
+    assert out["rebate_ativo"] is True
+    assert users[0].app_metadata.get("rebate_ativo") is True
+    assert users[1].app_metadata.get("rebate_ativo") is True
+    # desligar remove a flag (ausente = False) em todos os logins
+    svc.editar_config(contratante="BESA", rebate_ativo=False)
+    assert users[0].app_metadata.get("rebate_ativo", False) is False
+    assert users[1].app_metadata.get("rebate_ativo", False) is False
+
+
+def test_editar_config_rebate_preserva_unidades_e_cor():
+    """Mexer só no rebate não apaga cor/unidades (merge da config sincronizada)."""
+    users = [FakeUser("u1", "a@besa.com", _meta(contratante="BESA", cor="#111111", unidades=["UA"]))]
+    svc = _svc(users)
+    svc.editar_config(contratante="BESA", rebate_ativo=True)
+    assert users[0].app_metadata["cor"] == "#111111"
+    assert users[0].app_metadata["unidades"] == ["UA"]
+    assert users[0].app_metadata["rebate_ativo"] is True
+
+
+def test_listar_partners_expoe_rebate_ativo():
+    users = [
+        FakeUser("u1", "a@besa.com", _meta(contratante="BESA")),
+        FakeUser("u2", "b@ah.com", {"role": "parceiro", "contratante": "AH", "rebate_ativo": True}),
+    ]
+    partners = {p["contratante"]: p for p in _svc(users).listar_partners()}
+    assert partners["BESA"]["rebate_ativo"] is False  # ausente = desligado
+    assert partners["AH"]["rebate_ativo"] is True
+
+
 def test_mapa_unidades_por_contratante():
     users = [
         FakeUser("u1", "a@besa.com", _meta(contratante="BESA", unidades=["UA", "UB"])),

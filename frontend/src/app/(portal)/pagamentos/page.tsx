@@ -222,9 +222,24 @@ function AvisoCard({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: () =>
               : ""}
           </p>
         </div>
-        <span className="shrink-0 text-right font-display text-xl font-bold tabular-nums text-primary">
-          {formatMoeda(aviso.valor)}
-        </span>
+        {Number(aviso.rebate) > 0 ? (
+          <div className="shrink-0 text-right">
+            <p className="text-xs tabular-nums text-muted-foreground">
+              Orig. {formatMoeda(aviso.valor)} ·{" "}
+              <span className="text-success">− {formatMoeda(aviso.rebate)}</span>
+            </p>
+            <p className="font-display text-xl font-bold tabular-nums text-primary">
+              {formatMoeda(aviso.valor_a_pagar)}
+            </p>
+            <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+              Valor a pagar
+            </p>
+          </div>
+        ) : (
+          <span className="shrink-0 text-right font-display text-xl font-bold tabular-nums text-primary">
+            {formatMoeda(aviso.valor)}
+          </span>
+        )}
       </div>
 
       {codigos.length > 0 ? (
@@ -321,8 +336,9 @@ function AcaoRejeitar({ aviso, onMutate }: { aviso: PagamentoAviso; onMutate: ()
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">Rejeitar aviso</DialogTitle>
             <DialogDescription>
-              {aviso.unidade} · venc. {formatData(aviso.data_vencimento)} · {formatMoeda(aviso.valor)}.
-              Informe o motivo — o parceiro verá e poderá enviar um novo aviso.
+              {aviso.unidade} · venc. {formatData(aviso.data_vencimento)} ·{" "}
+              {formatMoeda(Number(aviso.rebate) > 0 ? aviso.valor_a_pagar : aviso.valor)}. Informe o
+              motivo — o parceiro verá e poderá enviar um novo aviso.
             </DialogDescription>
           </DialogHeader>
           <Input

@@ -74,8 +74,10 @@ def criar_aviso(body: AvisoIn, user: CurrentUser) -> dict:
             detail={"code": "not_found", "message": "Vencimento não encontrado no seu escopo."},
         )
     try:
-        valor, codigos = snapshot_lote(sols)
-        return _service().criar(user.contratante, body.unidade, body.data_vencimento, valor, codigos)
+        valor, rebate, codigos = snapshot_lote(sols, user.rebate_ativo)
+        return _service().criar(
+            user.contratante, body.unidade, body.data_vencimento, valor, codigos, rebate
+        )
     except PagamentoAvisoError as exc:
         raise _bad_request(exc) from exc
 
